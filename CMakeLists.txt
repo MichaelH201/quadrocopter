@@ -7,7 +7,7 @@ set(OpenCV_DIR "C:/Program Files/OpenCV-4.5.2/build/x64/vc15/lib")
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
-add_executable(Quadrocopter src/main.cpp)
+add_executable(Quadrocopter src/main.cpp src/calibrator.cpp src/calibrator.h)
 
 set(OpenCV_LIBS opencv_core opencv_imgproc opencv_highgui opencv_imgcodecs)
 
