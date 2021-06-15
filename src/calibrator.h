@@ -6,17 +6,25 @@
 #include <opencv2/imgproc.hpp>
 
 #include <iostream>
+#include "defines.h"
+
+#include "scene/CameraIntrinsics.h"
 
 using namespace cv;
 using namespace std;
 
-class Calibrator {
+class CameraCalibrator {
 public:
-    static void calibrateCamera(OutputArray R, OutputArray t);
-    static void localizeCamera();
-    static void drawPointsOnReference();
+    CameraIntrinsics<double> intrinsics;
+    const Size patternSize = Size(10,7);
+
+    CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize);
+    ~CameraCalibrator();
+    bool calibrate();
 
 private:
-    static Mat createImage(string fileName);
-    static void openWindow(string name);
+    bool detectCheckerboard(const Mat* frame, InputOutputArray corners);
+    void calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t);
+    void drawCheckerboardCorners(Mat img, InputArray corners, String* winName);
+    static void openWindow(String* name);
 };
