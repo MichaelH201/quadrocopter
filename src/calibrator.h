@@ -17,10 +17,11 @@ class CameraCalibrator {
 public:
     CameraIntrinsics<double> intrinsics;
     const Size patternSize = Size(10,7);
+    const double tileWidth = 0.0002333125f;
 
-    CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize);
+    CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize, double tileWidth);
     ~CameraCalibrator();
-    bool calibrate();
+    bool calibrate(int cameraId);
 
 private:
     bool detectCheckerboard(const Mat* frame, InputOutputArray corners);

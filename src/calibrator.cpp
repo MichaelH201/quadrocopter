@@ -2,25 +2,26 @@
 
 #include <utility>
 
-CameraCalibrator::CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize)
-: intrinsics(move(intrinsics)), patternSize(move(patternSize)){}
+CameraCalibrator::CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize, double tileWidth)
+: intrinsics(move(intrinsics)), patternSize(move(patternSize)), tileWidth(tileWidth){}
 
 CameraCalibrator::~CameraCalibrator() = default;
 
-bool CameraCalibrator::calibrate() {
+bool CameraCalibrator::calibrate(int cameraId) {
     vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
 
     // TODO: this should later iterate through camera stream frames
     // =====================================================================
-    std::string path = "src/resources/images/";
-    for(int i = 0; i < 3; i++) {
-        Mat img = imread(path + "ref1" + to_string(i) + ".jpg");
+    std::string path = "src/resources/images/cam" + to_string(cameraId) + "/";
+    for(int i = 0; i < 6; i++) {
+        std::string imageSrc = path + "c" + to_string(cameraId) + "_rp" + to_string(i) + ".jpg";
+        Mat img = imread(imageSrc);
         vector<Point2f> corners;
         if(detectCheckerboard(&img, corners)) {
             imgPoints->push_back(corners);
 
             #ifdef DEBUG
-            drawCheckerboardCorners(img, corners, new String("image ref1" + to_string(i)));
+            drawCheckerboardCorners(img, corners, new String("Camera " + to_string(cameraId) + ", Pic " + to_string(i)));
             #endif
         }
     }
@@ -29,9 +30,10 @@ bool CameraCalibrator::calibrate() {
     Mat R, t;
     calculateExtrinsics(imgPoints, R, t);
 
-    cout << R << endl;
-    cout << t << endl;
+    //cout << R << endl;
+    //cout << t << endl;
 
+    delete imgPoints;
     return true;
 }
 
@@ -54,8 +56,27 @@ void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imageP
 
     Mat E, mask;
     const vector<vector<Point2f>>& imgPoints = *imagePoints;
+    vector<vector<Point3f>> objPoints;
+
     E = findEssentialMat(imgPoints[0], imgPoints[1], cameraMatrix, RANSAC, 0.999, 1.0, mask);
     recoverPose(E, imgPoints[0], imgPoints[1], cameraMatrix, R, t, mask);
+
+    vector<Point3f> objP;
+    for(int y = 0; y < patternSize.height; y++) {
+        for(int x = 0; x < patternSize.width; x++) {
+            objP.push_back(Point3f(x*tileWidth, y*tileWidth, 0));
+        }
+    }
+    for(int i = 0; i < imagePoints->size(); i++) {
+        objPoints.push_back(objP);
+    }
+
+    Mat camMat, distCoeffs, Rs, ts;
+    calibrateCamera(objPoints, *imagePoints, Size(intrinsics.ImageSize[0], intrinsics.ImageSize[1]), camMat, distCoeffs, Rs, ts);
+
+    cout << "Camera Matrix" << endl;
+    cout << camMat << endl;
+    cout << endl;
 
     // TODO start here
     // https://stackoverflow.com/questions/22338728/calculate-object-points-in-opencv-cameracalibration-function
@@ -73,8 +94,8 @@ void CameraCalibrator::drawCheckerboardCorners(Mat img, InputArray corners, Stri
 }
 
 void CameraCalibrator::openWindow(String* name) {
-    int width = 1000;
-    int height = 1000;
+    int width = 1600;
+    int height = 900;
     namedWindow(*name, WINDOW_KEEPRATIO);
     resizeWindow(*name, width, height);
 }

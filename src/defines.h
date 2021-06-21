@@ -1,6 +1,6 @@
 #ifndef QUADROCOPTER_DEFINES_H
 #define QUADROCOPTER_DEFINES_H
 
-#define DEBUG
+//#define DEBUG
 
 #endif //QUADROCOPTER_DEFINES_H
