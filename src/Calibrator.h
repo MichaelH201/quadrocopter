@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include "defines.h"
+#include "utils.h"
+#include "IO/LogitechC920.h"
 
 #include "scene/CameraIntrinsics.h"
 
@@ -19,13 +21,15 @@ public:
     const Size patternSize = Size(10,7);
     const double tileWidth = 0.0002333125f;
 
-    CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize, double tileWidth);
+    CameraCalibrator(vector<ICamera*>& cameras, Size patternSize, double tileWidth);
     ~CameraCalibrator();
-    bool calibrate(int cameraId);
+    bool calibrate();
 
 private:
+    vector<ICamera*> _cameras;
+    cv::Mat* _cameraBuffer[];
+
     bool detectCheckerboard(const Mat* frame, InputOutputArray corners);
     void calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t);
     void drawCheckerboardCorners(Mat img, InputArray corners, String* winName);
-    static void openWindow(String* name);
 };

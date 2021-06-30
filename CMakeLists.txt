@@ -9,12 +9,15 @@ find_package(OpenMP REQUIRED)
 
 set(Project_FILES
         src/main.cpp
-        src/calibrator.cpp
-        src/calibrator.h
+        src/Calibrator.cpp
+        src/Calibrator.h
         src/scene/CameraIntrinsics.cpp
         src/scene/CameraIntrinsics.h
         src/math/MSVC_Fixes.h
-        src/defines.h)
+        src/defines.h
+        src/IO/LogitechC920.cpp
+        src/IO/LogitechC920.h
+        src/utils.h src/IO/ICamera.h src/IO/ICamera.cpp)
 
 add_executable(Quadrocopter ${Project_FILES})
 

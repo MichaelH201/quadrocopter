@@ -1,12 +1,47 @@
-#include "calibrator.h"
+#include "Calibrator.h"
 
 #include <utility>
 
-CameraCalibrator::CameraCalibrator(CameraIntrinsics<double> intrinsics, Size patternSize, double tileWidth)
-: intrinsics(move(intrinsics)), patternSize(move(patternSize)), tileWidth(tileWidth){}
+CameraCalibrator::CameraCalibrator(vector<ICamera*>& cameras, Size patternSize, double tileWidth)
+: _cameras(cameras), patternSize(move(patternSize)), tileWidth(tileWidth){
+    cout << "Start calibrating " << _cameras.size() << " Camera(s)." << endl;
 
-CameraCalibrator::~CameraCalibrator() = default;
+    // TODO create buffer for all cameras
+    _cameraBuffer[_cameras.size()];
 
+    for(auto & _cam : _cameras) {
+        if(!_cam->isSetup)
+        _cam->Setup();
+    }
+}
+
+CameraCalibrator::~CameraCalibrator() {
+    for(auto & _cam : _cameras) {
+        delete _cam;
+    }
+
+    cout << "Finished calibration" << endl;
+}
+
+bool CameraCalibrator::calibrate() {
+    vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
+
+    for(auto & _cam : _cameras) {
+
+        _cam->getFrame();
+    }
+    /*
+    int imgCount = 0;
+    while(imgCount < 10) {
+
+    }
+*/
+
+    delete imgPoints;
+    return true;
+}
+
+/*
 bool CameraCalibrator::calibrate(int cameraId) {
     vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
 
@@ -36,6 +71,7 @@ bool CameraCalibrator::calibrate(int cameraId) {
     delete imgPoints;
     return true;
 }
+*/
 
 bool CameraCalibrator::detectCheckerboard(const Mat* frame, InputOutputArray corners) {
     Mat gray;
@@ -87,16 +123,8 @@ void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imageP
  *  PRIVATE & DEBUG
  ******************* */
 void CameraCalibrator::drawCheckerboardCorners(Mat img, InputArray corners, String* winName) {
-    String* windowName = new String("Image " + *winName);
+    string* windowName = new string("Image " + *winName);
     drawChessboardCorners(img, patternSize, corners, true);
-    openWindow(windowName);
+    openWindow(windowName, Size(1600, 900));
     imshow(*windowName, img);
 }
-
-void CameraCalibrator::openWindow(String* name) {
-    int width = 1600;
-    int height = 900;
-    namedWindow(*name, WINDOW_KEEPRATIO);
-    resizeWindow(*name, width, height);
-}
-

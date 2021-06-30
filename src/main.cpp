@@ -3,7 +3,10 @@
 #include <opencv2/imgproc.hpp> // drawing shapes
 #include <opencv2/core/utils//logger.hpp>
 
-#include "calibrator.h"
+#include "Calibrator.h"
+#include "IO/LogitechC920.h"
+#include "IO/ICamera.h"
+#include "utils.h"
 #include "scene/CameraIntrinsics.h"
 #include "math/Vector.hh"
 
@@ -20,25 +23,15 @@ int main() {
     intrinsics.RadialDistortion.clear();
     intrinsics.TangentialDistortion.clear();
 
-    /*
-    intrinsics.ImageSize = base::Vec2d(2160.0, 2160.0);
-    intrinsics.FocalLength = 2500.0f;						 // focal length 35mm / 0,014mm/px = 2500px
-    intrinsics.PrincipalPoint = intrinsics.ImageSize * 0.5;	 // -> image center
-    intrinsics.RadialDistortion.clear();
-    intrinsics.TangentialDistortion.clear();
-    */
-
     double tileWidth = 0.027530875; // 118px * 0.0002333125 m/px;
 
-    CameraCalibrator calibrator = CameraCalibrator(intrinsics, Size(10, 7), tileWidth);
-    calibrator.calibrate(1);
-    calibrator.calibrate(2);
-    calibrator.calibrate(3);
-    calibrator.calibrate(4);
+    // swapping buffer damit die Kamera das Bild nicht überschreibt
+    // mutex to wait until the frame is written
+    vector<ICamera*> cameras = {new LogitechC920(0)};
 
-    #ifdef DEBUG
-    waitKey(0);
-    #endif
+    auto* calibrator = new CameraCalibrator(cameras, Size(10, 7), tileWidth);
+    calibrator->calibrate();
+    delete calibrator;
 
     return 0;
 }
