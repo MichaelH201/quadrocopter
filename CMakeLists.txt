@@ -17,7 +17,7 @@ set(Project_FILES
         src/defines.h
         src/IO/LogitechC920.cpp
         src/IO/LogitechC920.h
-        src/utils.h src/IO/ICamera.h src/IO/ICamera.cpp)
+        src/utils.h src/IO/ICamera.h src/IO/ICamera.cpp src/IO/CameraStreamer.cpp src/IO/CameraStreamer.h)
 
 add_executable(Quadrocopter ${Project_FILES})
 

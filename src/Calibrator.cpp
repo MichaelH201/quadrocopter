@@ -2,35 +2,41 @@
 
 #include <utility>
 
-CameraCalibrator::CameraCalibrator(vector<ICamera*>& cameras, Size patternSize, double tileWidth)
-: _cameras(cameras), patternSize(move(patternSize)), tileWidth(tileWidth){
-    cout << "Start calibrating " << _cameras.size() << " Camera(s)." << endl;
+CameraCalibrator::CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth)
+: streamer(streamer), patternSize(move(patternSize)), tileWidth(tileWidth){
+    cout << "Start calibrating " << streamer.camera_count << " Camera(s)." << endl;
 
-    // TODO create buffer for all cameras
-    _cameraBuffer[_cameras.size()];
-
-    for(auto & _cam : _cameras) {
-        if(!_cam->isSetup)
-        _cam->Setup();
-    }
 }
 
 CameraCalibrator::~CameraCalibrator() {
-    for(auto & _cam : _cameras) {
-        delete _cam;
-    }
-
     cout << "Finished calibration" << endl;
 }
 
 bool CameraCalibrator::calibrate() {
     vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
 
-    for(auto & _cam : _cameras) {
+    std::string* winName;
 
+    for(int i = 0; i < streamer.camera_count; i++) {
+        winName = new std::string("Cam " + to_string(i));
+        openWindow(winName);
+    }
+
+    while(waitKey(10) <= 0) {
+        for(int i = 0; i < streamer.camera_count; i++) {
+            Mat frame;
+            if(streamer.frame_queues[i]->try_pop(frame)) {
+                imshow("Cam " + to_string(i), frame);
+            }
+        }
+    }
+
+    delete winName;
+    /*
+    for(auto & _cam : _cameras) {
         _cam->getFrame();
     }
-    /*
+
     int imgCount = 0;
     while(imgCount < 10) {
 

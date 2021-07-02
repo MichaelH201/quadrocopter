@@ -1,11 +1,10 @@
 #include "ICamera.h"
-
 #include <utility>
 
-ICamera::ICamera(int deviceId, std::string camType) : camType(std::move(camType)) {
-    cam = cv::VideoCapture(0);
+ICamera::ICamera(int deviceId, std::string camType) : deviceId(deviceId), camType(std::move(camType)) {
+    cam = new cv::VideoCapture(deviceId);
 
-    if(!cam.isOpened()) {
+    if(!cam->isOpened()) {
         std::cerr << "ERROR: Could not open camera" << std::endl;
     }
 }
@@ -13,7 +12,8 @@ ICamera::ICamera(int deviceId, std::string camType) : camType(std::move(camType)
 ICamera::~ICamera() {
     if(IsCapturing())
         StopCapture();
-    cam.release();
+
+    cam->release();
 }
 
 /**
@@ -25,33 +25,34 @@ void ICamera::Setup() {
     SetFocusToInfinity();
 
     this->isSetup = true;
+    std::cout << "Camera Setup: " << camType << " (DeviceId: " << deviceId << ")" << std::endl;
 }
-
-cv::Mat ICamera::getFrame() {
-    checkSetup();
-
-    cv::Mat frame;
-    cam >> frame;
-    return frame;
-}
-
 
 void ICamera::DisableAutofocus() {
-    std::cerr << "This methods needs to be overridden in child class" << std::endl;
+    std::cerr << "The method DisableAutofocus() needs to be implemented in child class" << std::endl;
 }
 
 void ICamera::SetFocusToInfinity() {
-    std::cerr << "This methods needs to be overridden in child class" << std::endl;
+    std::cerr << "The method SetFocusToInfinity() needs to be implemented in child class" << std::endl;
 }
 
-void ICamera::StartCapture() {
+void ICamera::StartCapture(concurrent_queue<cv::Mat>* queue) {
     isCapturing = true;
-    // TODO implement this
+
+    while(IsCapturing()) {
+        cv::Mat frame;
+        (*cam) >> frame;
+        queue->push(frame);
+        frame.release();
+
+        if(queue->unsafe_size() > 100) {
+            std::cerr << "Camera buffer is running full -> Size: " << queue->unsafe_size() << " (" << camType << ", Id: " << deviceId << ")" << std::endl;
+        }
+    }
 }
 
 void ICamera::StopCapture() {
     isCapturing = false;
-    // TODO implement this
 }
 
 bool ICamera::IsCapturing() {

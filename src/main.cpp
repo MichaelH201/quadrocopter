@@ -4,8 +4,7 @@
 #include <opencv2/core/utils//logger.hpp>
 
 #include "Calibrator.h"
-#include "IO/LogitechC920.h"
-#include "IO/ICamera.h"
+#include "IO/CameraStreamer.h"
 #include "utils.h"
 #include "scene/CameraIntrinsics.h"
 #include "math/Vector.hh"
@@ -27,11 +26,11 @@ int main() {
 
     // swapping buffer damit die Kamera das Bild nicht überschreibt
     // mutex to wait until the frame is written
-    vector<ICamera*> cameras = {new LogitechC920(0)};
+    vector<int> deviceIds = {0, 1};
+    CameraStreamer streamer(deviceIds);
 
-    auto* calibrator = new CameraCalibrator(cameras, Size(10, 7), tileWidth);
-    calibrator->calibrate();
-    delete calibrator;
+    CameraCalibrator calibrator(streamer, Size(10, 7), tileWidth);
+    calibrator.calibrate();
 
     return 0;
 }
