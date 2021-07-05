@@ -4,7 +4,7 @@
 
 CameraCalibrator::CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth)
 : streamer(streamer), patternSize(move(patternSize)), tileWidth(tileWidth){
-    cout << "Start calibrating " << streamer.camera_count << " Camera(s)." << endl;
+    cout << "Start calibrating " << streamer.cameraCount << " Camera(s)." << endl;
 
 }
 
@@ -14,38 +14,63 @@ CameraCalibrator::~CameraCalibrator() {
 
 bool CameraCalibrator::calibrate() {
     vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
-
+    vector<Mat>* frames = new vector<Mat>();
+    
     std::string* winName;
-
-    for(int i = 0; i < streamer.camera_count; i++) {
+    for(int i = 0; i < streamer.cameraCount; i++) {
         winName = new std::string("Cam " + to_string(i));
         openWindow(winName);
     }
 
     while(waitKey(10) <= 0) {
-        for(int i = 0; i < streamer.camera_count; i++) {
-            Mat frame;
-            if(streamer.frame_queues[i]->try_pop(frame)) {
-                imshow("Cam " + to_string(i), frame);
+        if(streamer.TryGetFrames(frames)) {
+            for(int i = 0; i < frames->size(); i++) {
+                Mat frame = (*frames)[i];
+                vector<Point2f> corners;
+
+                if(detectCheckerboard(&frame, corners)) {
+                    //imgPoints->push_back(corners);
+                    drawChessboardCorners(frame, patternSize, corners, true);
+                }
+
+                imshow("Cam " + to_string(i), (*frames)[i]);
             }
         }
     }
 
     delete winName;
-    /*
-    for(auto & _cam : _cameras) {
-        _cam->getFrame();
-    }
-
+/*
     int imgCount = 0;
     while(imgCount < 10) {
-
+        if(streamer.TryGetFrames(frames)) {
+            for(int i = 0; i < frames->size(); i++) {
+                Mat frame = (*frames)[i];
+                vector<Point2f> corners;
+                if(detectCheckerboard(&frame, corners)) {
+                    imgPoints->push_back(corners);
+                }
+            }
+        }
     }
 */
-
     delete imgPoints;
     return true;
 }
+
+
+bool CameraCalibrator::detectCheckerboard(const Mat* frame, InputOutputArray corners) {
+    Mat gray;
+    cvtColor(*frame, gray, COLOR_BGR2GRAY);
+
+    // Find the chess board corners
+    if(findChessboardCorners(gray, patternSize, corners)) {
+        cornerSubPix(gray, corners, Size(11,11), Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 30, 0.001));
+        return true;
+    }
+
+    return false;
+}
+
 
 /*
 bool CameraCalibrator::calibrate(int cameraId) {
@@ -78,19 +103,6 @@ bool CameraCalibrator::calibrate(int cameraId) {
     return true;
 }
 */
-
-bool CameraCalibrator::detectCheckerboard(const Mat* frame, InputOutputArray corners) {
-    Mat gray;
-    cvtColor(*frame, gray, COLOR_BGR2GRAY);
-
-    // Find the chess board corners
-    if(findChessboardCorners(*frame, patternSize, corners)) {
-        cornerSubPix(gray, corners, Size(11,11), Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::MAX_ITER, 30, 0.001));
-        return true;
-    }
-
-    return false;
-}
 
 void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t) {
     double cameraM[3][3] = {{intrinsics.FocalLength, 0.0, intrinsics.PrincipalPoint[0]}, {0.0, intrinsics.FocalLength, intrinsics.PrincipalPoint[1]}, {0.0, 0.0, 1.0}};

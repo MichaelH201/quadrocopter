@@ -2,22 +2,25 @@
 #define QUADROCOPTER_CAMERASTREAMER_H
 
 #include "thread"
-#include "concurrent_queue.h"
+#include "shared_mutex"
 #include "opencv2/opencv.hpp"
 #include "ICamera.h"
 #include "LogitechC920.h"
 
-using namespace concurrency;
-
 class CameraStreamer {
 public:
     std::vector<ICamera*> cameras;
-    std::vector<concurrent_queue<cv::Mat>*> frame_queues;
+    std::vector<std::vector<cv::Mat>*> frame_queues;
     std::vector<std::thread*> camera_threads;
-    int camera_count;
+    int cameraCount;
+    int* bufferIndex;
 
     explicit CameraStreamer(std::vector<int> deviceIds);
     ~CameraStreamer();
+    bool TryGetFrames(std::vector<cv::Mat>* frames);
+
+private:
+    std::shared_mutex* mtx;
 };
 
 #endif //QUADROCOPTER_CAMERASTREAMER_H

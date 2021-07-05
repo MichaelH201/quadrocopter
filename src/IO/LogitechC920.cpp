@@ -10,4 +10,9 @@ void LogitechC920::SetFocusToInfinity() {
     cam->set(cv::CAP_PROP_FOCUS, 255);
 }
 
+void LogitechC920::SetResolution(int width, int height) {
+    cam->set(cv::CAP_PROP_FRAME_WIDTH, width);
+    cam->set(cv::CAP_PROP_FRAME_HEIGHT, height);
+}
+
 
