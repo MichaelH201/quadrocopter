@@ -81,7 +81,15 @@ struct CameraIntrinsics {
 	 * @returns Transformed point in camera (view) space.
 	 */
 	base::Vector<T, 3> Image2CameraSpace(const base::Vector<T, 3>& in);
+
+	std::string toString();
 };
+
+template<typename T>
+std::string CameraIntrinsics<T>::toString() {
+    return ("> Image Size: [" + std::to_string((int)ImageSize[0]) + ", " + std::to_string((int)ImageSize[1]) + "]" + "\n" + "> Focal Length: " +
+    std::to_string(FocalLength) + "\n" + "> Principal Point: [" + std::to_string(PrincipalPoint[0]) + ", " + std::to_string(PrincipalPoint[1]) + "]");
+}
 
 template <typename T>
 inline base::Vector<T, 2> CameraIntrinsics<T>::applyDistortion(

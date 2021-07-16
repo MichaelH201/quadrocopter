@@ -12,6 +12,7 @@ class ICamera {
 public:
     bool isSetup = false;
     std::string camType = "ICamera";
+    int deviceId;
     CameraIntrinsics<double> intrinsics;
 
     // constructor and destructor
@@ -34,7 +35,6 @@ protected:
     cv::VideoCapture* cam;
 
 private:
-    int deviceId;
     std::atomic<bool> isCapturing = false;
     std::atomic<bool> frameAvailableB1 = false;
     std::atomic<bool> frameAvailableB2 = false;

@@ -37,7 +37,7 @@ CameraStreamer::~CameraStreamer() {
         cameras[i]->StopCapture();
         camera_threads[i]->join();
 
-        std::cout << "Finished capturing with " << cameras[i]->camType << " (DeviceId: " << i << ")" << std::endl;
+        std::cout << "Finished capturing with " << cameras[i]->camType << " (DeviceId: " << cameras[i]->deviceId << ")" << std::endl;
 
         delete cameras[i];
         delete frame_queues[i];
@@ -52,7 +52,7 @@ bool CameraStreamer::TryGetFrames(std::vector<cv::Mat>* frames) {
     frames->clear();
     int readIndex = *bufferIndex;
 
-    // check if every camera has a frame for this buffer.
+    // check if every camera has a new frame in the active buffer.
     for(int i = 0; i < cameraCount; i++) {
         if(!cameras[i]->IsFrameAvailable(readIndex)) {
             return false;
@@ -63,7 +63,7 @@ bool CameraStreamer::TryGetFrames(std::vector<cv::Mat>* frames) {
     *bufferIndex = (readIndex+1) % 2;
     mtx->unlock();
 
-    // get the frames from all queues
+    // get the frames from all queues and flag the buffer to not contain new images
     for(int i = 0; i < cameraCount; i++) {
         cv::Mat frame;
         frames->push_back((*frame_queues[i])[readIndex]);

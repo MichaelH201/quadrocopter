@@ -3,19 +3,22 @@
 #include <utility>
 
 CameraCalibrator::CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth)
-: streamer(streamer), patternSize(move(patternSize)), tileWidth(tileWidth){
-    cout << "Start calibrating " << streamer.cameraCount << " Camera(s)." << endl;
-
-}
+: streamer(streamer), patternSize(move(patternSize)), tileWidth(tileWidth){}
 
 CameraCalibrator::~CameraCalibrator() {
     cout << "Finished calibration" << endl;
 }
 
 bool CameraCalibrator::calibrate() {
-    vector<vector<Point2f>>* imgPoints = new vector<vector<Point2f>>();
+    cout << "Start calibrating " << streamer.cameraCount << " Camera(s)." << endl;
+    // camera -> all images -> image points
+    vector<vector<vector<Point2f>>*> imgPoints = vector<vector<vector<Point2f>>*>();
+    for(int i = 0; i < streamer.cameraCount; i++) {
+        imgPoints.push_back(new vector<vector<Point2f>>());
+    }
     vector<Mat>* frames = new vector<Mat>();
 
+    cout << "Collecting reference images..." << endl;
     int imgCount = 0;
     int failCount = 0;
     float progress = 0;
@@ -24,38 +27,51 @@ bool CameraCalibrator::calibrate() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         if(streamer.TryGetFrames(frames)) {
-            // detect chessboard on all frames (supposed to work on 1 cam atm)
-            for(auto frame : *frames) {
+            bool foundAll = true;
+            failCount = 0;
+            vector<vector<Point2f>> allCorners = vector<vector<Point2f>>(streamer.cameraCount);
+
+            #pragma omp parallel for default(none) shared(foundAll, frames, allCorners, failCount, progress, std::cout)
+            for(int i = 0; i < streamer.cameraCount; i++) {
+                Mat& frame = (*frames)[i];
                 vector<Point2f> corners;
                 if(detectCheckerboard(&frame, corners)) {
-                    imgPoints->push_back(corners);
-                    imgCount++;
-
-                    failCount = 0;
-                    progress = (float)imgCount*100 / (float)maxCalibrationFrames;
-                    std::cout << '\r' << progress << "%" << "               " << std::flush;
-
-                    // wait some time to reposition the chessboard
-                    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
+                    allCorners[i] = corners;
                 } else {
+                    foundAll = false;
                     failCount++;
-                    std::cout << '\r' << progress << "%" << " - try fail (" << failCount << ")" << std::flush;
+                    std::cout << '\r' << progress << "%" << " - fail (" << failCount << ")" << std::flush;
                 }
+            }
+
+            // we have a chessboard in all images!
+            if(foundAll) {
+                for(int i = 0; i < streamer.cameraCount; i++) {
+                    imgPoints[i]->push_back(allCorners[i]);
+                }
+                imgCount++;
+
+                progress = (float)imgCount*100 / (float)maxCalibrationFrames;
+                std::cout << '\r' << progress << "%" << "               " << std::flush;
+
+                // wait some time to reposition the chessboard (even on fail)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             }
         }
     }
 
     std::cout << std::endl;
+    cout << "Calculating camera intrinsics..." << endl;
 
-    Mat R, t;
-    calculateExtrinsics(imgPoints, R, t);
-
-    //cout << R << endl;
-    //cout << t << endl;
+    for(int i = 0; i < streamer.cameraCount; i++) {
+        applyIntrinsics(imgPoints[i], streamer.cameras[i]);
+    }
 
 
-    delete imgPoints;
+    for(auto* p : imgPoints) {
+        delete p;
+    }
+
     return true;
 }
 
@@ -72,6 +88,29 @@ bool CameraCalibrator::detectCheckerboard(const Mat* frame, InputOutputArray cor
 
     return false;
 }
+
+void CameraCalibrator::applyIntrinsics(const vector<vector<Point2f>>* imagePoints, ICamera* cam) const {
+    vector<vector<Point3f>> objPoints;
+
+    vector<Point3f> objP;
+    for(int y = 0; y < patternSize.height; y++) {
+        for(int x = 0; x < patternSize.width; x++) {
+            objP.push_back(Point3f(x*tileWidth, y*tileWidth, 0));
+        }
+    }
+    for(int i = 0; i < imagePoints->size(); i++) {
+        objPoints.push_back(objP);
+    }
+
+    Mat camMat, distCoeffs, Rs, ts;
+    calibrateCamera(objPoints, *imagePoints, Size(cam->intrinsics.ImageSize[0], cam->intrinsics.ImageSize[1]), camMat, distCoeffs, Rs, ts);
+
+    cam->intrinsics.FocalLength = (camMat.at<double>(0,0) + camMat.at<double>(1,1)) / 2.0;
+    cam->intrinsics.PrincipalPoint = base::Vec2d(camMat.at<double>(0,2), camMat.at<double>(1,2));
+    cout << "Intrinsics for camera " << cam->deviceId << ":" << endl;
+    cout << cam->intrinsics.toString() << endl;
+}
+
 
 void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t) {
  /*

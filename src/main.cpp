@@ -30,11 +30,11 @@ int main() {
 
     // swapping buffer damit die Kamera das Bild nicht überschreibt
     // mutex to wait until the frame is written
-    vector<int> deviceIds = {1};
+    vector<int> deviceIds = {0, 1};
     CameraStreamer streamer(deviceIds);
 
     CameraCalibrator calibrator(streamer, Size(10, 7), tileWidth);
-    calibrator.maxCalibrationFrames = 20;
+    calibrator.maxCalibrationFrames = 10;
     calibrator.calibrate();
 
     return 0;

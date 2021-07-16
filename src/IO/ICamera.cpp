@@ -1,6 +1,6 @@
 #include "ICamera.h"
 
-ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, move(type), base::Vec2d(1280.0, 720.0)) {}
+ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, move(type), base::Vec2d(1280, 720)) {}
 
 ICamera::ICamera(int deviceId, std::string type, base::Vec2d imageSize) : deviceId(deviceId), camType(std::move(camType)) {
     cam = new cv::VideoCapture(deviceId);
@@ -26,7 +26,7 @@ void ICamera::Setup() {
     // prevent auto focus and set focus to maximum value
     DisableAutofocus();
     SetFocusToInfinity();
-    SetResolution((int)intrinsics.ImageSize[0],(int)intrinsics.ImageSize[1]);
+    SetResolution(intrinsics.ImageSize[0],intrinsics.ImageSize[1]);
 
     intrinsics.RadialDistortion.clear();
     intrinsics.TangentialDistortion.clear();
