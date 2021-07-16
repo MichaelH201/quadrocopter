@@ -11,7 +11,6 @@ set(Project_FILES
         src/main.cpp
         src/Calibrator.cpp
         src/Calibrator.h
-        src/scene/CameraIntrinsics.cpp
         src/scene/CameraIntrinsics.h
         src/math/MSVC_Fixes.h
         src/defines.h

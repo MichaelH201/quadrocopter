@@ -20,6 +20,7 @@ public:
     CameraIntrinsics<double> intrinsics;
     const Size patternSize = Size(10,7);
     const double tileWidth = 0.0002333125f;
+    int maxCalibrationFrames = 10;
 
     CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth);
     ~CameraCalibrator();

@@ -2,6 +2,10 @@
 
 LogitechC920::LogitechC920(int deviceId) : ICamera(deviceId, "Logitech C920 HD") {}
 
+
+LogitechC920::LogitechC920(int deviceId, const base::Vec2d& imageSize) : ICamera(deviceId, "Logitech C920 HD", imageSize) {}
+
+
 void LogitechC920::DisableAutofocus() {
     cam->set(cv::CAP_PROP_AUTOFOCUS, 0);
 }
@@ -14,5 +18,4 @@ void LogitechC920::SetResolution(int width, int height) {
     cam->set(cv::CAP_PROP_FRAME_WIDTH, width);
     cam->set(cv::CAP_PROP_FRAME_HEIGHT, height);
 }
-
 

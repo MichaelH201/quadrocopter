@@ -1,11 +1,15 @@
 #include "ICamera.h"
 
-ICamera::ICamera(int deviceId, std::string camType) : deviceId(deviceId), camType(std::move(camType)) {
+ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, move(type), base::Vec2d(1280.0, 720.0)) {}
+
+ICamera::ICamera(int deviceId, std::string type, base::Vec2d imageSize) : deviceId(deviceId), camType(std::move(camType)) {
     cam = new cv::VideoCapture(deviceId);
 
     if(!cam->isOpened()) {
         std::cerr << "ERROR: Could not open camera" << std::endl;
     }
+
+    intrinsics.ImageSize = imageSize;
 }
 
 ICamera::~ICamera() {
@@ -22,7 +26,10 @@ void ICamera::Setup() {
     // prevent auto focus and set focus to maximum value
     DisableAutofocus();
     SetFocusToInfinity();
-    SetResolution(1280, 720);
+    SetResolution((int)intrinsics.ImageSize[0],(int)intrinsics.ImageSize[1]);
+
+    intrinsics.RadialDistortion.clear();
+    intrinsics.TangentialDistortion.clear();
 
     this->isSetup = true;
     std::cout << "Camera Setup: " << camType << " (DeviceId: " << deviceId << ")" << std::endl;

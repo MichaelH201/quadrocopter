@@ -6,14 +6,17 @@
 #include "shared_mutex"
 #include "opencv2/opencv.hpp"
 #include "../defines.h"
+#include "../scene/CameraIntrinsics.h"
 
 class ICamera {
 public:
     bool isSetup = false;
     std::string camType = "ICamera";
+    CameraIntrinsics<double> intrinsics;
 
     // constructor and destructor
-    explicit ICamera(int deviceId, std::string  type);
+    ICamera(int deviceId, std::string type);
+    ICamera(int deviceId, std::string type, base::Vec2d imageSize);
     virtual ~ICamera();
 
     virtual void DisableAutofocus();

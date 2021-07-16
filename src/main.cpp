@@ -15,21 +15,26 @@ int main() {
     utils::logging::setLogLevel(utils::logging::LOG_LEVEL_WARNING);
 
     CameraIntrinsics<double> intrinsics;
-    intrinsics.ImageSize = base::Vec2d(1920.0, 1080.0);
+    intrinsics.ImageSize = base::Vec2d(1280.0, 720.0);
     // focal length 3,67mm / 0,00398mm/px = 922,11px
     intrinsics.FocalLength = 922.11f;
     intrinsics.PrincipalPoint = intrinsics.ImageSize * 0.5;
     intrinsics.RadialDistortion.clear();
     intrinsics.TangentialDistortion.clear();
 
-    double tileWidth = 0.027530875; // 118px * 0.0002333125 m/px;
+    // from screen
+    //double tileWidth = 0.027530875; // 118px * 0.0002333125 m/px;
+
+    // from paper 1.8mm
+    double tileWidth = 0.018;
 
     // swapping buffer damit die Kamera das Bild nicht überschreibt
     // mutex to wait until the frame is written
-    vector<int> deviceIds = {0};
+    vector<int> deviceIds = {1};
     CameraStreamer streamer(deviceIds);
 
     CameraCalibrator calibrator(streamer, Size(10, 7), tileWidth);
+    calibrator.maxCalibrationFrames = 20;
     calibrator.calibrate();
 
     return 0;
