@@ -15,9 +15,11 @@ public:
     int deviceId;
     CameraIntrinsics<double> intrinsics;
 
+    bool displayFrames = false;
+
     // constructor and destructor
     ICamera(int deviceId, std::string type);
-    ICamera(int deviceId, std::string type, base::Vec2d imageSize);
+    ICamera(int deviceId, std::string type, const base::Vec2d& imageSize);
     virtual ~ICamera();
 
     virtual void DisableAutofocus();

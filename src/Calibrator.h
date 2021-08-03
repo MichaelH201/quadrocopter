@@ -18,8 +18,8 @@ using namespace std;
 class CameraCalibrator {
 public:
     CameraIntrinsics<double> intrinsics;
-    const Size patternSize = Size(10,7);
-    const double tileWidth = 0.0002333125f;
+    const Size patternSize;
+    const double tileWidth;
     int maxCalibrationFrames = 10;
 
     CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth);
@@ -32,5 +32,5 @@ private:
     bool detectCheckerboard(const Mat* frame, InputOutputArray corners);
     void applyIntrinsics(const vector<vector<Point2f>>* imagePoints, ICamera* cam) const;
     void calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t);
-    void drawCheckerboardCorners(Mat img, InputArray corners, String* winName);
+    void drawCheckerboardCorners(Mat img, InputArray corners, String& winName);
 };

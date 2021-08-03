@@ -15,7 +15,7 @@ public:
     int cameraCount;
     int* bufferIndex;
 
-    explicit CameraStreamer(std::vector<int> deviceIds);
+    explicit CameraStreamer(std::vector<int> deviceIds, bool debugMode = false);
     ~CameraStreamer();
     bool TryGetFrames(std::vector<cv::Mat>* frames);
 

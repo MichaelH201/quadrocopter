@@ -107,8 +107,18 @@ void CameraCalibrator::applyIntrinsics(const vector<vector<Point2f>>* imagePoint
 
     cam->intrinsics.FocalLength = (camMat.at<double>(0,0) + camMat.at<double>(1,1)) / 2.0;
     cam->intrinsics.PrincipalPoint = base::Vec2d(camMat.at<double>(0,2), camMat.at<double>(1,2));
-    cout << "Intrinsics for camera " << cam->deviceId << ":" << endl;
-    cout << cam->intrinsics.toString() << endl;
+
+    double meanError = 0;
+    for(int i = 0; i < objPoints.size(); i++) {
+        vector<Point2f> imagePoints2;
+        cv::projectPoints(objPoints[i], Rs, ts, camMat, distCoeffs, imagePoints2);
+        double error = cv::norm(imagePoints[i], imagePoints2, cv::NORM_L2)/(double)imagePoints2.size();
+        meanError += error;
+    }
+
+    cout << "re-projection error: " << meanError/(double)objPoints.size() << endl;
+    //cout << "Intrinsics for camera " << cam->deviceId << ":" << endl;
+    //cout << cam->intrinsics.toString() << endl;
 }
 
 
@@ -135,13 +145,6 @@ void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imageP
         objPoints.push_back(objP);
     }
 
-    Mat camMat, distCoeffs, Rs, ts;
-    calibrateCamera(objPoints, *imagePoints, Size(1280, 720), camMat, distCoeffs, Rs, ts);
-
-    cout << "Camera Matrix" << endl;
-    cout << camMat << endl;
-    cout << endl;
-
     // TODO start here
     // https://stackoverflow.com/questions/22338728/calculate-object-points-in-opencv-cameracalibration-function
 }
@@ -150,10 +153,10 @@ void CameraCalibrator::calculateExtrinsics(const vector<vector<Point2f>>* imageP
 /* ******************
  *  PRIVATE & DEBUG
  ******************* */
-void CameraCalibrator::drawCheckerboardCorners(Mat img, InputArray corners, String* winName) {
-    string* windowName = new string("Image " + *winName);
+void CameraCalibrator::drawCheckerboardCorners(Mat img, InputArray corners, String& winName) {
+    string windowName = string("Image " + winName);
     drawChessboardCorners(img, patternSize, corners, true);
     openWindow(windowName, Size(1600, 900));
-    imshow(*windowName, img);
+    imshow(windowName, img);
     waitKey(1);
 }

@@ -1,8 +1,11 @@
 #include "ICamera.h"
+#include "../utils.h"
 
-ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, move(type), base::Vec2d(1280, 720)) {}
+#include <utility>
 
-ICamera::ICamera(int deviceId, std::string type, base::Vec2d imageSize) : deviceId(deviceId), camType(std::move(camType)) {
+ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, std::move(type), base::Vec2d(1280, 720)) {}
+
+ICamera::ICamera(int deviceId, std::string type, const base::Vec2d& imageSize) : deviceId(deviceId), camType(std::move(type)) {
     cam = new cv::VideoCapture(deviceId);
 
     if(!cam->isOpened()) {
@@ -32,12 +35,16 @@ void ICamera::Setup() {
     intrinsics.TangentialDistortion.clear();
 
     this->isSetup = true;
-    std::cout << "Camera Setup: " << camType << " (DeviceId: " << deviceId << ")" << std::endl;
+    //std::cout << "Camera Setup: " << camType << " (DeviceId: " << deviceId << ")" << std::endl;
 }
 
 void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx) {
     checkSetup();
     isCapturing = true;
+
+    if(displayFrames) {
+        openWindow("cam" + std::to_string(deviceId), cv::Size(1600, 900));
+    }
 
     while(IsCapturing()) {
 
@@ -50,6 +57,11 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
         SetFrameAvailable(bIndex, true);
         mtx->unlock_shared();
 
+        if(displayFrames) {
+            imshow("cam" + std::to_string(deviceId), frame);
+            cv::waitKey(1);
+        }
+
         frame.release();
 
         // sleep for a short duration
@@ -59,6 +71,9 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
 
 void ICamera::StopCapture() {
     isCapturing = false;
+
+    if(displayFrames)
+        closeWindow("cam" + std::to_string(deviceId));
 }
 
 bool ICamera::IsCapturing() {

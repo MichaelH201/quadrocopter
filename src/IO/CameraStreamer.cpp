@@ -1,6 +1,6 @@
 #include "CameraStreamer.h"
 
-CameraStreamer::CameraStreamer(std::vector<int> deviceIds) {
+CameraStreamer::CameraStreamer(std::vector<int> deviceIds, bool debugMode) {
     cameraCount = deviceIds.size();
     bufferIndex = new int(0);
     mtx = new std::shared_mutex();
@@ -14,6 +14,9 @@ CameraStreamer::CameraStreamer(std::vector<int> deviceIds) {
         int dId = deviceIds[i];
         cam = new LogitechC920(dId);
         cam->Setup();
+
+        if(debugMode)
+            cam->displayFrames = true;
 
         // add camera to vector
         cameras.push_back(cam);
