@@ -23,14 +23,15 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {0};
+    vector<int> deviceIds = {0, 1};
     CameraStreamer streamer(deviceIds, true);
 
     // start calibration
     // TODO implement calibration as module for cameras to execute them in their own thread
     CameraCalibrator calibrator(streamer, patternSize, tileWidth);
-    calibrator.maxCalibrationFrames = 5;
-    calibrator.calibrate();
+    calibrator.maxCalibrationFrames = 16;
 
+    while(waitKey(0)) {}
+    //calibrator.calibrate();
     return 0;
 }

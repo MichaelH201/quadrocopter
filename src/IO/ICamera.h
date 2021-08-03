@@ -31,15 +31,16 @@ public:
     void StopCapture();
     bool IsCapturing();
     bool IsFrameAvailable(int index);
-    void SetFrameAvailable(int index, bool value);
 
 protected:
     cv::VideoCapture* cam;
 
 private:
+    void SetFrameAvailable(int index, bool value);
     std::atomic<bool> isCapturing = false;
     std::atomic<bool> frameAvailableB1 = false;
     std::atomic<bool> frameAvailableB2 = false;
+    int lastBufferIndex;
 
     void checkSetup();
 };

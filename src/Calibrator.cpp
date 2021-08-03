@@ -16,9 +16,9 @@ bool CameraCalibrator::calibrate() {
     for(int i = 0; i < streamer.cameraCount; i++) {
         imgPoints.push_back(new vector<vector<Point2f>>());
     }
-    vector<Mat>* frames = new vector<Mat>();
 
     cout << "Collecting reference images..." << endl;
+    vector<Mat> frames;
     int imgCount = 0;
     int failCount = 0;
     float progress = 0;
@@ -26,37 +26,36 @@ bool CameraCalibrator::calibrate() {
     while(imgCount < maxCalibrationFrames) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
-        if(streamer.TryGetFrames(frames)) {
-            bool foundAll = true;
-            failCount = 0;
-            vector<vector<Point2f>> allCorners = vector<vector<Point2f>>(streamer.cameraCount);
+        streamer.GetFrames(frames);
+        bool foundAll = true;
+        failCount = 0;
+        vector<vector<Point2f>> allCorners = vector<vector<Point2f>>(streamer.cameraCount);
 
-            #pragma omp parallel for default(none) shared(foundAll, frames, allCorners, failCount, progress, std::cout)
+        #pragma omp parallel for default(none) shared(foundAll, frames, allCorners, failCount, progress, std::cout)
+        for(int i = 0; i < streamer.cameraCount; i++) {
+            Mat& frame = frames[i];
+            vector<Point2f> corners;
+            if(detectCheckerboard(&frame, corners)) {
+                allCorners[i] = corners;
+            } else {
+                foundAll = false;
+                failCount++;
+                std::cout << '\r' << progress << "%" << " - fail (" << failCount << ")" << std::flush;
+            }
+        }
+
+        // we have a chessboard in all images!
+        if(foundAll) {
             for(int i = 0; i < streamer.cameraCount; i++) {
-                Mat& frame = (*frames)[i];
-                vector<Point2f> corners;
-                if(detectCheckerboard(&frame, corners)) {
-                    allCorners[i] = corners;
-                } else {
-                    foundAll = false;
-                    failCount++;
-                    std::cout << '\r' << progress << "%" << " - fail (" << failCount << ")" << std::flush;
-                }
+                imgPoints[i]->push_back(allCorners[i]);
             }
+            imgCount++;
 
-            // we have a chessboard in all images!
-            if(foundAll) {
-                for(int i = 0; i < streamer.cameraCount; i++) {
-                    imgPoints[i]->push_back(allCorners[i]);
-                }
-                imgCount++;
+            progress = (float)imgCount*100 / (float)maxCalibrationFrames;
+            std::cout << '\r' << progress << "%" << "               " << std::flush;
 
-                progress = (float)imgCount*100 / (float)maxCalibrationFrames;
-                std::cout << '\r' << progress << "%" << "               " << std::flush;
-
-                // wait some time to reposition the chessboard (even on fail)
-                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            }
+            // wait some time to reposition the chessboard (even on fail)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     }
 
@@ -102,23 +101,16 @@ void CameraCalibrator::applyIntrinsics(const vector<vector<Point2f>>* imagePoint
         objPoints.push_back(objP);
     }
 
-    Mat camMat, distCoeffs, Rs, ts;
-    calibrateCamera(objPoints, *imagePoints, Size(cam->intrinsics.ImageSize[0], cam->intrinsics.ImageSize[1]), camMat, distCoeffs, Rs, ts);
+    Mat camMat, dist, optCamMat;
+    std::vector<cv::Mat> Rs, ts;
+    double err = calibrateCamera(objPoints, *imagePoints, Size(cam->intrinsics.ImageSize[0], cam->intrinsics.ImageSize[1]), camMat, dist, Rs, ts);
+
 
     cam->intrinsics.FocalLength = (camMat.at<double>(0,0) + camMat.at<double>(1,1)) / 2.0;
     cam->intrinsics.PrincipalPoint = base::Vec2d(camMat.at<double>(0,2), camMat.at<double>(1,2));
-
-    double meanError = 0;
-    for(int i = 0; i < objPoints.size(); i++) {
-        vector<Point2f> imagePoints2;
-        cv::projectPoints(objPoints[i], Rs, ts, camMat, distCoeffs, imagePoints2);
-        double error = cv::norm(imagePoints[i], imagePoints2, cv::NORM_L2)/(double)imagePoints2.size();
-        meanError += error;
-    }
-
-    cout << "re-projection error: " << meanError/(double)objPoints.size() << endl;
-    //cout << "Intrinsics for camera " << cam->deviceId << ":" << endl;
-    //cout << cam->intrinsics.toString() << endl;
+    cout << "Intrinsics for camera " << cam->deviceId << ":" << endl;
+    cout << cam->intrinsics.toString() << endl;
+    cout << "re-projection error: " << err << endl;
 }
 
 

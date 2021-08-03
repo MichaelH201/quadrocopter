@@ -17,7 +17,8 @@ public:
 
     explicit CameraStreamer(std::vector<int> deviceIds, bool debugMode = false);
     ~CameraStreamer();
-    bool TryGetFrames(std::vector<cv::Mat>* frames);
+    void GetFrames(std::vector<cv::Mat>& frames);
+    cv::Mat GetFrame(int camIndex);
 
 private:
     std::shared_mutex* mtx;

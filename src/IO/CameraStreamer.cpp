@@ -51,27 +51,50 @@ CameraStreamer::~CameraStreamer() {
     delete mtx;
 }
 
-bool CameraStreamer::TryGetFrames(std::vector<cv::Mat>* frames) {
-    frames->clear();
+void CameraStreamer::GetFrames(std::vector<cv::Mat>& frames) {
+    frames = std::vector<cv::Mat>();
     int readIndex = *bufferIndex;
 
-    // check if every camera has a new frame in the active buffer.
-    for(int i = 0; i < cameraCount; i++) {
-        if(!cameras[i]->IsFrameAvailable(readIndex)) {
-            return false;
+    while(true) {
+        // check if every camera has a new frame in the active buffer.
+        for(int i = 0; i < cameraCount; i++) {
+            if(!cameras[i]->IsFrameAvailable(readIndex)) {
+                continue;
+            }
         }
+
+        mtx->lock();
+        *bufferIndex = (readIndex+1) % 2;
+        mtx->unlock();
+
+        // get the frames from all queues
+        for(int i = 0; i < cameraCount; i++) {
+            cv::Mat frame;
+            frames.push_back((*frame_queues[i])[readIndex]);
+        }
+
+        break;
+    }
+}
+
+cv::Mat CameraStreamer::GetFrame(int camIndex) {
+    if(camIndex < 0 || cameras.size() <= camIndex)
+        throw std::invalid_argument("camIndex " + std::to_string(camIndex) + " is out of range. Camera array size: " +
+                                            std::to_string(cameras.size()));
+
+    int readIndex = *bufferIndex;
+
+    while(true) {
+        if(!cameras[camIndex]->IsFrameAvailable(readIndex)) {
+            continue;
+        }
+
+        mtx->lock();
+        *bufferIndex = (readIndex+1) % 2;
+        mtx->unlock();
+
+        break;
     }
 
-    mtx->lock();
-    *bufferIndex = (readIndex+1) % 2;
-    mtx->unlock();
-
-    // get the frames from all queues and flag the buffer to not contain new images
-    for(int i = 0; i < cameraCount; i++) {
-        cv::Mat frame;
-        frames->push_back((*frame_queues[i])[readIndex]);
-        cameras[i]->SetFrameAvailable(readIndex, false);
-    }
-
-    return true;
+    return (*frame_queues[camIndex])[readIndex];
 }

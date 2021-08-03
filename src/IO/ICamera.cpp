@@ -41,22 +41,32 @@ void ICamera::Setup() {
 void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx) {
     checkSetup();
     isCapturing = true;
+    lastBufferIndex = *bufferIndex;
 
     if(displayFrames) {
-        openWindow("cam" + std::to_string(deviceId), cv::Size(1600, 900));
+        openWindow("cam" + std::to_string(deviceId));
     }
 
     while(IsCapturing()) {
-
         cv::Mat frame;
         (*cam) >> frame;
 
+        // ====== thread safe ======
         mtx->lock_shared();
         int bIndex = (*bufferIndex);
+
+        if(lastBufferIndex != bIndex) {
+            SetFrameAvailable(lastBufferIndex, false);
+            lastBufferIndex = bIndex;
+        }
+
         multiBuffer->at(bIndex) = frame;
         SetFrameAvailable(bIndex, true);
-        mtx->unlock_shared();
 
+        mtx->unlock_shared();
+        // ====== thread safe end ======
+
+        // for debug reasons
         if(displayFrames) {
             imshow("cam" + std::to_string(deviceId), frame);
             cv::waitKey(1);

@@ -3,7 +3,7 @@
 
 #include "opencv2/opencv.hpp"
 
-static void openWindow(std::string& name, cv::WindowFlags flags = cv::WINDOW_AUTOSIZE) {
+static void openWindow(const std::string& name, cv::WindowFlags flags = cv::WINDOW_AUTOSIZE) {
     cv::namedWindow(name, flags);
 }
 
