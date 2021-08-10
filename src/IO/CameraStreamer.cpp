@@ -59,7 +59,7 @@ void CameraStreamer::GetFrames(std::vector<cv::Mat>& frames) {
         // check if every camera has a new frame in the active buffer.
         for(int i = 0; i < cameraCount; i++) {
             if(!cameras[i]->IsFrameAvailable(readIndex)) {
-                continue;
+                goto endloop;
             }
         }
 
@@ -69,11 +69,12 @@ void CameraStreamer::GetFrames(std::vector<cv::Mat>& frames) {
 
         // get the frames from all queues
         for(int i = 0; i < cameraCount; i++) {
-            cv::Mat frame;
-            frames.push_back((*frame_queues[i])[readIndex]);
+            cv::Mat frame = (*frame_queues[i])[readIndex];
+            frames.push_back(frame);
         }
 
         break;
+        endloop:;
     }
 }
 

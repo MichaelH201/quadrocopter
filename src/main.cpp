@@ -4,10 +4,7 @@
 #include <opencv2/core/utils//logger.hpp>
 
 #include "Calibrator.h"
-#include "IO/CameraStreamer.h"
-#include "utils.h"
-#include "scene/CameraIntrinsics.h"
-#include "math/Vector.hh"
+#include "DroneTracker.h"
 
 #include <iostream>
 
@@ -23,15 +20,17 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {0, 1};
-    CameraStreamer streamer(deviceIds, true);
+    vector<int> deviceIds = {1};
+    CameraStreamer streamer(deviceIds);
 
     // start calibration
     // TODO implement calibration as module for cameras to execute them in their own thread
     CameraCalibrator calibrator(streamer, patternSize, tileWidth);
     calibrator.maxCalibrationFrames = 16;
-
-    while(waitKey(0)) {}
     //calibrator.calibrate();
+
+    DroneTracker tracker(streamer);
+    tracker.track();
+
     return 0;
 }
