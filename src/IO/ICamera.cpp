@@ -1,12 +1,11 @@
 #include "ICamera.h"
-#include "../utils.h"
-
 #include <utility>
 
 ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, std::move(type), base::Vec2d(1280, 720)) {}
 
 ICamera::ICamera(int deviceId, std::string type, const base::Vec2d& imageSize) : deviceId(deviceId), camType(std::move(type)) {
     cam = new cv::VideoCapture(deviceId);
+    tracker = new DroneTracker();
 
     if(!cam->isOpened()) {
         std::cerr << "ERROR: Could not open camera" << std::endl;
@@ -35,7 +34,6 @@ void ICamera::Setup() {
     intrinsics.TangentialDistortion.clear();
 
     this->isSetup = true;
-    //std::cout << "Camera Setup: " << camType << " (DeviceId: " << deviceId << ")" << std::endl;
 }
 
 void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx) {
@@ -50,6 +48,10 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
     while(IsCapturing()) {
         cv::Mat frame;
         (*cam) >> frame;
+
+        if(isTracking) {
+            tracker->track(frame);
+        }
 
         // ====== thread safe ======
         mtx->lock_shared();
@@ -84,6 +86,16 @@ void ICamera::StopCapture() {
 
     if(displayFrames)
         closeWindow("cam" + std::to_string(deviceId));
+}
+
+void ICamera::enableDroneTracking() {
+    checkSetup();
+    if(!isCapturing) {
+        std::cerr << camType << " (device " << deviceId << ") is not capturing. Call StartCapture() before enabling drone tracking." << std::endl;
+        throw std::bad_function_call();
+    }
+
+    isTracking = true;
 }
 
 bool ICamera::IsCapturing() {

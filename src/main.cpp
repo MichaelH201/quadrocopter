@@ -20,8 +20,8 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {1};
-    CameraStreamer streamer(deviceIds);
+    vector<int> deviceIds = {0, 1};
+    CameraStreamer streamer(deviceIds, true);
 
     // start calibration
     // TODO implement calibration as module for cameras to execute them in their own thread
@@ -29,8 +29,13 @@ int main() {
     calibrator.maxCalibrationFrames = 16;
     //calibrator.calibrate();
 
-    DroneTracker tracker(streamer);
-    tracker.track();
+    streamer.activateDroneTracking();
+
+    while(true) {
+        if(waitKey(1) > 0) {
+            break;
+        }
+    }
 
     return 0;
 }

@@ -33,6 +33,26 @@ CameraStreamer::CameraStreamer(std::vector<int> deviceIds, bool debugMode) {
 
         std::cout << "Start capturing with " << cam->camType << " (DeviceId: " << dId << ")" << std::endl;
     }
+
+    // make sure every camera is setup and capturing before move on to next step
+    int timeout = 0;
+    while(timeout < 10) {
+        for(int i = 0; i < cameraCount; i++) {
+            if(!cameras[i]->isCapturing) {
+                goto waitAndCheck;
+            }
+        }
+
+        break;
+        waitAndCheck:;
+        timeout++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    if(timeout >= 10) {
+        std::cerr << "Timeout: camera streamer could not start capturing for all cameras" << std::endl;
+        throw std::exception("Timout");
+    }
 }
 
 CameraStreamer::~CameraStreamer() {
@@ -98,4 +118,10 @@ cv::Mat CameraStreamer::GetFrame(int camIndex) {
     }
 
     return (*frame_queues[camIndex])[readIndex];
+}
+
+void CameraStreamer::activateDroneTracking() {
+    for(int i = 0; i < cameraCount; i++) {
+        cameras[i]->enableDroneTracking();
+    }
 }

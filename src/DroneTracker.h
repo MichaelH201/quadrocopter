@@ -2,23 +2,21 @@
 #define QUADROCOPTER_DRONETRACKER_H
 
 #include "opencv2/opencv.hpp"
-#include "IO/CameraStreamer.h"
 #include <iostream>
 #include "utils.h"
 
 class DroneTracker {
 public:
-    explicit DroneTracker(CameraStreamer& streamer);
-    void track();
+    void track(cv::Mat& frame);
 
 private:
-    const int MAX_BUFFER_LENGTH = 3;
-    CameraStreamer& streamer;
+    static const int MAX_BUFFER_LENGTH = 3;
     std::deque<cv::Mat> buffer;
-    cv::Mat backgroundModel;
 
     std::vector<cv::Rect2f> detectMovingObjects(cv::Mat& img);
-    void createBackgroundModel();
+    void combineOverlappingBoundingBoxes(std::vector<cv::Rect2f>& bboxes);
+    bool containsRect(const cv::Rect2f& rect1, const cv::Rect2f& rect2);
+    cv::Rect2f combineRects(const cv::Rect2f& rect1, const cv::Rect2f& rect2);
 };
 
 

@@ -7,10 +7,13 @@
 #include "opencv2/opencv.hpp"
 #include "../defines.h"
 #include "../scene/CameraIntrinsics.h"
+#include "../DroneTracker.h"
+#include "../utils.h"
 
 class ICamera {
 public:
-    bool isSetup = false;
+    std::atomic<bool> isSetup = false;
+    std::atomic<bool> isCapturing = false;
     std::string camType = "ICamera";
     int deviceId;
     CameraIntrinsics<double> intrinsics;
@@ -31,16 +34,19 @@ public:
     void StopCapture();
     bool IsCapturing();
     bool IsFrameAvailable(int index);
+    void enableDroneTracking();
 
 protected:
     cv::VideoCapture* cam;
+    DroneTracker* tracker;
 
 private:
     void SetFrameAvailable(int index, bool value);
-    std::atomic<bool> isCapturing = false;
     std::atomic<bool> frameAvailableB1 = false;
     std::atomic<bool> frameAvailableB2 = false;
-    int lastBufferIndex;
+    std::atomic<bool> isTracking = false;
+
+    int lastBufferIndex = 0;
 
     void checkSetup();
 };

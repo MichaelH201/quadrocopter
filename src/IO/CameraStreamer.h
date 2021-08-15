@@ -19,6 +19,7 @@ public:
     ~CameraStreamer();
     void GetFrames(std::vector<cv::Mat>& frames);
     cv::Mat GetFrame(int camIndex);
+    void activateDroneTracking();
 
 private:
     std::shared_mutex* mtx;

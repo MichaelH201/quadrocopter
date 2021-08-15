@@ -7,7 +7,7 @@
 
 class LogitechC920 : public ICamera {
 public:
-    explicit LogitechC920(int devicdeId);
+    explicit LogitechC920(int deviceId);
     LogitechC920(int deviceId, const base::Vec2d& imageSize);
     void DisableAutofocus() override;
     void SetFocusToInfinity() override;

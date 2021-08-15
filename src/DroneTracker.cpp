@@ -1,49 +1,27 @@
 #include "DroneTracker.h"
 
-DroneTracker::DroneTracker(CameraStreamer& streamer) : streamer(streamer) {
-    for(int i = 0; i < streamer.cameraCount; i++){
-        openWindow("cam" + std::to_string(i) + " tracked");
-        openWindow("cam" + std::to_string(i) + " diff");
-    }
-}
-
-void DroneTracker::track() {
-    createBackgroundModel();
-
+void DroneTracker::track(cv::Mat& frame) {
     // do this until any key is pressed
-    while(true) {
-        cv::Mat frame = streamer.GetFrame(0);
-        cv::Mat grayScale;
-        cvtColor(frame, grayScale, cv::COLOR_BGR2GRAY);
+    cv::Mat grayScale;
+    cvtColor(frame, grayScale, cv::COLOR_BGR2GRAY);
 
-        if(buffer.size() < MAX_BUFFER_LENGTH) {
-            buffer.push_back(grayScale);
-            continue;
-        } else {
-            buffer.pop_front();
-            buffer.push_back(grayScale);
-        }
+    if(buffer.size() < MAX_BUFFER_LENGTH) {
+        buffer.push_back(grayScale);
+        return;
+    } else {
+        buffer.pop_front();
+        buffer.push_back(grayScale);
+    }
 
-        for(cv::Rect2f& bb : detectMovingObjects(frame)) {
-            cv::rectangle(frame, bb, cv::Scalar(255, 0, 0));
-        }
-
-        cv::imshow("cam" + std::to_string(0) + " tracked", frame);
-        cv::waitKey(1);
-
-
-        int k = cv::waitKey(33);
-        if(k == 27)
-            break;
+    for(cv::Rect2f& bb : detectMovingObjects(frame)) {
+        cv::rectangle(frame, bb, cv::Scalar(255, 0, 0));
     }
 }
 
 std::vector<cv::Rect2f> DroneTracker::detectMovingObjects(cv::Mat &img) {
-
-    //cv::Mat diffSum = cv::Mat::zeros(cv::Size(1280, 720), CV_8UC1);
     cv::Mat diff;
     cv::absdiff(buffer[MAX_BUFFER_LENGTH-2], buffer[MAX_BUFFER_LENGTH-1],diff);
-    cv::threshold(diff, diff, 30, 255, cv::THRESH_BINARY);
+    cv::threshold(diff, diff, 15, 255, cv::THRESH_BINARY);
     cv::dilate(diff, diff, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(6, 6), cv::Point(3,3)));
 
     // find contours
@@ -56,18 +34,38 @@ std::vector<cv::Rect2f> DroneTracker::detectMovingObjects(cv::Mat &img) {
             boundingRects.push_back(cv::boundingRect(contour));
     }
 
-    cv::imshow("cam" + std::to_string(0) + " diff", diff);
-    cv::waitKey(1);
+    combineOverlappingBoundingBoxes(boundingRects);
 
     return boundingRects;
 }
 
-void DroneTracker::createBackgroundModel() {
-    std::cout << "Creating the background model for drone detection..." << std::endl;
+void DroneTracker::combineOverlappingBoundingBoxes(std::vector<cv::Rect2f>& bboxes) {
+    bool dirty = true;
 
-    std::cout << "Press a key to captures the background Image" << std::endl;
-    if(cv::waitKey(0) >= 0) {
-        cvtColor(streamer.GetFrame(0), backgroundModel, cv::COLOR_BGR2GRAY);
+    while(dirty) {
+        dirty = false;
+
+        for(int i = 0; i < bboxes.size(); i++) {
+            for(int j = 0; j < bboxes.size(); j++) {
+                if(i == j) continue;
+
+                if(containsRect(bboxes[i], bboxes[j])) {
+                    bboxes[i] = combineRects(bboxes[i], bboxes[j]);
+                    bboxes.erase(bboxes.begin()+j);
+                    j--;
+                    if(j < i) { i--; }
+                    dirty = true;
+                }
+            }
+        }
     }
+}
+
+bool DroneTracker::containsRect(const cv::Rect2f& rect1, const cv::Rect2f& rect2) {
+    return rect1.contains(rect2.tl()) || rect1.contains(rect2.br());
+}
+
+cv::Rect2f DroneTracker::combineRects(const cv::Rect2f& rect1, const cv::Rect2f& rect2) {
+    return cv::boundingRect(std::vector<cv::Point>{rect1.tl(), rect1.br(), rect2.tl(), rect2.br()});
 }
 
