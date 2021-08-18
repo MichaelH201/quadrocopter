@@ -20,21 +20,19 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {0, 1};
+    vector<int> deviceIds = {1};
     CameraStreamer streamer(deviceIds, true);
 
     // start calibration
     // TODO implement calibration as module for cameras to execute them in their own thread
-    CameraCalibrator calibrator(streamer, patternSize, tileWidth);
-    calibrator.maxCalibrationFrames = 16;
+    //CameraCalibrator calibrator(streamer, patternSize, tileWidth);
+    //calibrator.maxCalibrationFrames = 16;
     //calibrator.calibrate();
 
     streamer.activateDroneTracking();
 
     while(true) {
-        if(waitKey(1) > 0) {
-            break;
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return 0;

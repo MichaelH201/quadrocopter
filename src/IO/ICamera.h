@@ -14,6 +14,7 @@ class ICamera {
 public:
     std::atomic<bool> isSetup = false;
     std::atomic<bool> isCapturing = false;
+    std::atomic<bool> isDroneFocused = false;
     std::string camType = "ICamera";
     int deviceId;
     CameraIntrinsics<double> intrinsics;
@@ -44,7 +45,7 @@ private:
     void SetFrameAvailable(int index, bool value);
     std::atomic<bool> frameAvailableB1 = false;
     std::atomic<bool> frameAvailableB2 = false;
-    std::atomic<bool> isTracking = false;
+    std::atomic<bool> isTrackingEnabled = false;
 
     int lastBufferIndex = 0;
 

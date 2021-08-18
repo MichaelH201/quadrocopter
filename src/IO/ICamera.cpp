@@ -4,7 +4,7 @@
 ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, std::move(type), base::Vec2d(1280, 720)) {}
 
 ICamera::ICamera(int deviceId, std::string type, const base::Vec2d& imageSize) : deviceId(deviceId), camType(std::move(type)) {
-    cam = new cv::VideoCapture(deviceId);
+    cam = new cv::VideoCapture(deviceId, cv::CAP_DSHOW);
     tracker = new DroneTracker();
 
     if(!cam->isOpened()) {
@@ -36,6 +36,12 @@ void ICamera::Setup() {
     this->isSetup = true;
 }
 
+/**
+ * Start the capturing process for this camera.
+ * @param bufferIndex The pointer to the index of the buffer the frames should be written to.
+ * @param multiBuffer The buffer where the frame will be written to.
+ * @param mtx Mutex object which is used to lock thread sensitive actions.
+ */
 void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx) {
     checkSetup();
     isCapturing = true;
@@ -49,35 +55,41 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
         cv::Mat frame;
         (*cam) >> frame;
 
-        if(isTracking) {
-            tracker->track(frame);
-        }
+        if(!frame.empty()) {
+            if(isTrackingEnabled) {
+                tracker->track(frame);
 
-        // ====== thread safe ======
-        mtx->lock_shared();
-        int bIndex = (*bufferIndex);
+                if(!isDroneFocused) {
+                    isDroneFocused = tracker->droneFound;
+                }
+            }
 
-        if(lastBufferIndex != bIndex) {
-            SetFrameAvailable(lastBufferIndex, false);
-            lastBufferIndex = bIndex;
-        }
+            // ====== thread safe ======
+            mtx->lock_shared();
+            int bIndex = (*bufferIndex);
 
-        multiBuffer->at(bIndex) = frame;
-        SetFrameAvailable(bIndex, true);
+            if(lastBufferIndex != bIndex) {
+                SetFrameAvailable(lastBufferIndex, false);
+                lastBufferIndex = bIndex;
+            }
 
-        mtx->unlock_shared();
-        // ====== thread safe end ======
+            multiBuffer->at(bIndex) = frame;
+            SetFrameAvailable(bIndex, true);
 
-        // for debug reasons
-        if(displayFrames) {
-            imshow("cam" + std::to_string(deviceId), frame);
-            cv::waitKey(1);
+            mtx->unlock_shared();
+            // ====== thread safe end ======
+
+            // for debug reasons
+            if(displayFrames) {
+                imshow("cam" + std::to_string(deviceId), frame);
+                cv::waitKey(1);
+            }
         }
 
         frame.release();
 
         // sleep for a short duration
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(5)); <<<--- nope
     }
 }
 
@@ -95,7 +107,7 @@ void ICamera::enableDroneTracking() {
         throw std::bad_function_call();
     }
 
-    isTracking = true;
+    isTrackingEnabled = true;
 }
 
 bool ICamera::IsCapturing() {

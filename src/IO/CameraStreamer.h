@@ -2,6 +2,7 @@
 #define QUADROCOPTER_CAMERASTREAMER_H
 
 #include "thread"
+#include "future"
 #include "shared_mutex"
 #include "opencv2/opencv.hpp"
 #include "ICamera.h"
@@ -22,6 +23,8 @@ public:
     void activateDroneTracking();
 
 private:
+    static const int CAM_SETUP_TIMEOUT = 1000; /* in ms */
+    static const int FIND_DRONE_TIMEOUT = 10 * 1000; /* in ms */
     std::shared_mutex* mtx;
 };
 

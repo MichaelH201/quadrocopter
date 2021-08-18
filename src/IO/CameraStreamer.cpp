@@ -35,24 +35,18 @@ CameraStreamer::CameraStreamer(std::vector<int> deviceIds, bool debugMode) {
     }
 
     // make sure every camera is setup and capturing before move on to next step
-    int timeout = 0;
-    while(timeout < 10) {
+    std::cout << "Wait for all cameras to setup..." << std::endl;
+    while(true) {
         for(int i = 0; i < cameraCount; i++) {
             if(!cameras[i]->isCapturing) {
                 goto waitAndCheck;
             }
         }
-
         break;
         waitAndCheck:;
-        timeout++;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-
-    if(timeout >= 10) {
-        std::cerr << "Timeout: camera streamer could not start capturing for all cameras" << std::endl;
-        throw std::exception("Timout");
-    }
+    std::cout << "Camera setup done." << std::endl;
 }
 
 CameraStreamer::~CameraStreamer() {
@@ -120,8 +114,28 @@ cv::Mat CameraStreamer::GetFrame(int camIndex) {
     return (*frame_queues[camIndex])[readIndex];
 }
 
+/**
+ * Activates the drone tracking for all cameras. This will lead to firstly a detection and
+ * a tracking afterwards.
+ */
 void CameraStreamer::activateDroneTracking() {
+    std::cout << "Detecting drone ..." << std::endl;
+
     for(int i = 0; i < cameraCount; i++) {
         cameras[i]->enableDroneTracking();
     }
+
+    // make sure every camera found the drone before we can proceed
+    while(true) {
+        for(int i = 0; i < cameraCount; i++) {
+            if(!cameras[i]->isDroneFocused) {
+                goto repeat;
+            }
+        }
+        break;
+        repeat:;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+
+    std::cout << "Detection done." << std::endl;
 }
