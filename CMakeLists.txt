@@ -3,7 +3,7 @@ project(Quadrocopter)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(OpenCV_DIR "C:/Program Files/OpenCV-4.5.2/build/x64/vc15/lib")
+set(OpenCV_DIR "C:/Program Files/OpenCV-4.5.3/install/opencv/x64/vc16/lib")
 find_package(OpenCV REQUIRED)
 find_package(OpenMP REQUIRED)
 
