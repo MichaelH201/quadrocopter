@@ -19,6 +19,9 @@ public:
 private:
     static const int MAX_BUFFER_LENGTH = 2;
     std::deque<cv::Mat> buffer;
+    cv::Rect2f lastDetection = cv::Rect();
+    int detectionCount = 0;
+    static const int MAX_DETECTIONS = 10;
     cv::Rect currentBbox = cv::Rect();
     cv::Ptr<cv::Tracker> tracker;
 

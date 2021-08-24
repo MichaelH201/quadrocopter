@@ -1,7 +1,7 @@
 #include "DroneTracker.h"
 
 DroneTracker::DroneTracker() {
-    tracker = cv::TrackerKCF::create();
+    tracker = cv::TrackerCSRT::create();
 }
 
 DroneTracker::~DroneTracker() {
@@ -61,10 +61,33 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
     if(bbs.size() == 1 && bbs[0].area() > 5000 && bbs[0].area() < 40000) {
         float ratio = bbs[0].height/bbs[0].width;
         if(ratio > .3 && ratio < .6) {
-            currentBbox = bbs[0];
-            tracker->init(frame, currentBbox);
-            droneFound = true;
-            return true;
+
+            cv::Rect2f currDetection = bbs[0];
+
+            if(!lastDetection.empty()) {
+                cv::Point2f c1 = lastDetection.tl() + cv::Point2f(lastDetection.width / 2, lastDetection.height/2);
+                cv::Point2f c2 = currDetection.tl() + cv::Point2f(currDetection.width / 2, currDetection.height/2);
+                float sqDistance = (c1.x - c2.x)*(c1.x - c2.x) + (c1.y - c2.y)*(c1.y - c2.y);
+
+                if(sqDistance < 20*20) {
+                    lastDetection = currDetection;
+                    detectionCount++;
+                }
+                else {
+                    lastDetection = currDetection;
+                    detectionCount = 0;
+                }
+            } else {
+                lastDetection = bbs[0];
+                detectionCount = 0;
+            }
+
+            if(detectionCount >= MAX_DETECTIONS) {
+                currentBbox = bbs[0];
+                tracker->init(frame, currentBbox);
+                droneFound = true;
+                return true;
+            }
         }
     }
 
@@ -82,9 +105,6 @@ bool DroneTracker::tryGetBoundingBox(cv::Rect2f& rect) {
 
 std::vector<cv::Rect2f> DroneTracker::detectMovingObjects() {
     cv::Mat fgMask, addition;
-
-    //backSub->apply(img.clone(), fgMask);
-    //cv::morphologyEx(fgMask, fgMask, cv::MORPH_OPEN, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3)));
 
     cv::absdiff(buffer[MAX_BUFFER_LENGTH-2], buffer[MAX_BUFFER_LENGTH-1], fgMask);
     cv::blur(fgMask, fgMask, cv::Size(3, 3));
