@@ -17,13 +17,12 @@ using namespace std;
 
 class CameraCalibrator {
 public:
-    CameraIntrinsics<double> intrinsics;
+    CameraIntrinsics intrinsics;
     const Size patternSize;
     const double tileWidth;
     int maxCalibrationFrames = 10;
 
     CameraCalibrator(CameraStreamer& streamer, Size patternSize, double tileWidth);
-    ~CameraCalibrator();
     bool calibrate();
 
 private:
@@ -31,6 +30,7 @@ private:
 
     bool detectCheckerboard(const Mat* frame, InputOutputArray corners);
     void applyIntrinsics(const vector<vector<Point2f>>* imagePoints, ICamera* cam) const;
-    void calculateExtrinsics(const vector<vector<Point2f>>* imagePoints, OutputArray R, OutputArray t);
+    bool calculateExtrinsicsOffset();
+    void setReferenceSpace();
     void drawCheckerboardCorners(Mat img, InputArray corners, String& winName);
 };

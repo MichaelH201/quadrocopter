@@ -36,28 +36,25 @@ void DroneTracker::track(cv::Mat& frame) {
 
     drawBoundingBoxes(frame, bbs);
 
-    /*
-    float bestDist = std::numeric_limits<float>::max();
-    int index = -1;
-    for(int i = 0; i < bbs.size(); i++) {
-        cv::Point c1 = (currentBbox->br() + currentBbox->tl()) * 0.5f;
-        cv::Point c2 = (bbs[i].br() + bbs[i].tl()) * 0.5f;
-        auto dist = (float)cv::sqrt((c1.x - c2.x)*(c1.x - c2.x) + (c1.y - c2.y)*(c1.y - c2.y));
-
-        if(dist < bestDist) {
-            float areaDelta = cv::abs(currentBbox->area() / bbs[i].area());
-            if(areaDelta > .8 && areaDelta < 1.2) {
-                bestDist = dist;
-                index = i;
-            }
-        }
-    }
-    if(index >= 0)
-        currentBbox = new cv::Rect2f(bbs[index].x, bbs[index].y, bbs[index].width, bbs[index].height);
-        */
 }
 
 bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) {
+
+    cv::Mat gray;
+    std::vector<cv::Point2f> corners;
+    cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+
+    // Find the chess board corners
+    if(findChessboardCorners(gray, cv::Size(7,5), corners)) {
+        cornerSubPix(gray, corners, cv::Size(11,11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001));
+
+        currentBbox = cv::boundingRect(corners);
+        tracker->init(frame, currentBbox);
+        droneFound = true;
+        return true;
+    }
+
+    /*
     if(bbs.size() == 1 && bbs[0].area() > 5000 && bbs[0].area() < 40000) {
         float ratio = bbs[0].height/bbs[0].width;
         if(ratio > .3 && ratio < .6) {
@@ -90,7 +87,7 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
             }
         }
     }
-
+*/
     return false;
 }
 
@@ -111,7 +108,7 @@ std::vector<cv::Rect2f> DroneTracker::detectMovingObjects() {
     cv::threshold(fgMask, fgMask, 25, 255, cv::THRESH_BINARY);
     cv::dilate(fgMask, fgMask, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(6, 6), cv::Point(3,3)));
 
-    cv::imshow("diff image", fgMask);
+    //cv::imshow("diff image", fgMask);
 
     // find contours
     std::vector<std::vector<cv::Point>> contours;

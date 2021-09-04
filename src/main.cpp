@@ -1,10 +1,8 @@
 #include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc.hpp> // drawing shapes
 #include <opencv2/core/utils//logger.hpp>
 
 #include "Calibrator.h"
-#include "DroneTracker.h"
+#include "Triangulation.h"
 
 #include <iostream>
 
@@ -20,18 +18,20 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {1};
+    vector<int> deviceIds = {0, 1, 2};
     CameraStreamer streamer(deviceIds, true);
 
     // start calibration
-    // TODO implement calibration as module for cameras to execute them in their own thread
-    //CameraCalibrator calibrator(streamer, patternSize, tileWidth);
-    //calibrator.maxCalibrationFrames = 16;
-    //calibrator.calibrate();
+    CameraCalibrator calibrator(streamer, patternSize, tileWidth);
+    calibrator.maxCalibrationFrames = 5;
+    calibrator.calibrate();
 
-    streamer.activateDroneTracking();
+    //streamer.activateDroneTracking();
+
+    Triangulation triag(streamer);
 
     while(true) {
+        triag.triangulate();
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 

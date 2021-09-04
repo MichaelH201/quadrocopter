@@ -1,9 +1,9 @@
 #include "ICamera.h"
 #include <utility>
 
-ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, std::move(type), base::Vec2d(1280, 720)) {}
+ICamera::ICamera(int deviceId, std::string type) : ICamera(deviceId, std::move(type), std::vector<int>{1024, 576}) {}
 
-ICamera::ICamera(int deviceId, std::string type, const base::Vec2d& imageSize) : deviceId(deviceId), camType(std::move(type)) {
+ICamera::ICamera(int deviceId, std::string type, const std::vector<int>& imageSize) : deviceId(deviceId), camType(std::move(type)) {
     cam = new cv::VideoCapture(deviceId, cv::CAP_DSHOW);
     tracker = new DroneTracker();
 
@@ -29,9 +29,6 @@ void ICamera::Setup() {
     DisableAutofocus();
     SetFocusToInfinity();
     SetResolution(intrinsics.ImageSize[0],intrinsics.ImageSize[1]);
-
-    intrinsics.RadialDistortion.clear();
-    intrinsics.TangentialDistortion.clear();
 
     this->isSetup = true;
 }
@@ -108,6 +105,17 @@ void ICamera::enableDroneTracking() {
     }
 
     isTrackingEnabled = true;
+}
+
+void ICamera::setCameraMatrix(cv::Mat camMat) {
+    intrinsics.FocalLength = ((float)camMat.at<double>(0,0) + (float)camMat.at<double>(1,1)) / 2.0f;
+    intrinsics.PrincipalPoint = std::vector<float>{(float)camMat.at<double>(0,2), (float)camMat.at<double>(1,2)};
+    CameraMatrix = camMat;
+}
+
+void ICamera::setExtrinsics(cv::Mat R, cv::Mat t){
+    RotationMatrix = R;
+    TranslationVector = t;
 }
 
 bool ICamera::IsCapturing() {

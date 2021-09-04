@@ -17,13 +17,17 @@ public:
     std::atomic<bool> isDroneFocused = false;
     std::string camType = "ICamera";
     int deviceId;
-    CameraIntrinsics<double> intrinsics;
+    CameraIntrinsics intrinsics;
+
+    cv::Mat CameraMatrix;
+    cv::Mat RotationMatrix;
+    cv::Mat TranslationVector;
 
     bool displayFrames = false;
 
     // constructor and destructor
     ICamera(int deviceId, std::string type);
-    ICamera(int deviceId, std::string type, const base::Vec2d& imageSize);
+    ICamera(int deviceId, std::string type, const std::vector<int>& imageSize);
     virtual ~ICamera();
 
     virtual void DisableAutofocus();
@@ -36,6 +40,8 @@ public:
     bool IsCapturing();
     bool IsFrameAvailable(int index);
     void enableDroneTracking();
+    void setCameraMatrix(cv::Mat camMat);
+    void setExtrinsics(cv::Mat R, cv::Mat t);
 
 protected:
     cv::VideoCapture* cam;
