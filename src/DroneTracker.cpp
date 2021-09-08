@@ -9,7 +9,7 @@ DroneTracker::~DroneTracker() {
 }
 
 
-void DroneTracker::track(cv::Mat& frame) {
+void DroneTracker::track(cv::Mat& frame, cv::Rect& rect) {
     cv::Mat grayScale;
     cvtColor(frame, grayScale, cv::COLOR_BGR2GRAY);
 
@@ -34,12 +34,17 @@ void DroneTracker::track(cv::Mat& frame) {
         tracker->update(frame, currentBbox);
     }
 
+    if(droneFound)
+        rect = currentBbox;
+    else
+        rect = cv::Rect();
+
     drawBoundingBoxes(frame, bbs);
 
 }
 
 bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) {
-
+/*
     cv::Mat gray;
     std::vector<cv::Point2f> corners;
     cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
@@ -53,8 +58,8 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
         droneFound = true;
         return true;
     }
+*/
 
-    /*
     if(bbs.size() == 1 && bbs[0].area() > 5000 && bbs[0].area() < 40000) {
         float ratio = bbs[0].height/bbs[0].width;
         if(ratio > .3 && ratio < .6) {
@@ -87,7 +92,7 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
             }
         }
     }
-*/
+
     return false;
 }
 

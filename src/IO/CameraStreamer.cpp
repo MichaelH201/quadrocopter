@@ -7,7 +7,8 @@ CameraStreamer::CameraStreamer(std::vector<int> deviceIds, bool debugMode) {
 
     ICamera* cam;
     std::thread* t;
-    std::vector<cv::Mat>* q;
+    std::vector<cv::Mat>* fq;
+    std::vector<cv::Rect>* bq;
 
     for(int i = 0; i < cameraCount; i++) {
         // create and setup camera
@@ -22,13 +23,13 @@ CameraStreamer::CameraStreamer(std::vector<int> deviceIds, bool debugMode) {
         cameras.push_back(cam);
 
         // create queue and add it to vector
-        q = new std::vector<cv::Mat>;
-        q->push_back(cv::Mat());
-        q->push_back(cv::Mat());
-        frame_queues.push_back(q);
+        fq = new std::vector<cv::Mat>(2);
+        bq = new std::vector<cv::Rect>(2);
+        frame_queues.push_back(fq);
+        bounding_queues.push_back(bq);
 
         // create thread and add it to vector
-        t = new std::thread(&ICamera::StartCapture, cam, bufferIndex, q, mtx);
+        t = new std::thread(&ICamera::StartCapture, cam, bufferIndex, fq, bq, mtx);
         camera_threads.push_back(t);
 
         std::cout << "Start capturing with " << cam->camType << " (DeviceId: " << dId << ")" << std::endl;
@@ -58,6 +59,7 @@ CameraStreamer::~CameraStreamer() {
 
         delete cameras[i];
         delete frame_queues[i];
+        delete bounding_queues[i];
         delete camera_threads[i];
     }
 
@@ -85,6 +87,35 @@ void CameraStreamer::GetFrames(std::vector<cv::Mat>& frames) {
         for(int i = 0; i < cameraCount; i++) {
             cv::Mat frame = (*frame_queues[i])[readIndex];
             frames.push_back(frame);
+        }
+
+        break;
+        endloop:;
+    }
+}
+
+void CameraStreamer::GetFrames(std::vector<cv::Mat>& frames, std::vector<cv::Rect>& bbs) {
+    frames = std::vector<cv::Mat>();
+    int readIndex = *bufferIndex;
+
+    while(true) {
+        // check if every camera has a new frame in the active buffer.
+        for(int i = 0; i < cameraCount; i++) {
+            if(!cameras[i]->IsFrameAvailable(readIndex)) {
+                goto endloop;
+            }
+        }
+
+        mtx->lock();
+        *bufferIndex = (readIndex+1) % 2;
+        mtx->unlock();
+
+        // get the frames from all queues
+        for(int i = 0; i < cameraCount; i++) {
+            cv::Mat frame = (*frame_queues[i])[readIndex];
+            frames.push_back(frame);
+            cv::Rect bb = (*bounding_queues[i])[readIndex];
+            bbs.push_back(bb);
         }
 
         break;

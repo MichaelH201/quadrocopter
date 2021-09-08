@@ -13,7 +13,7 @@ public:
 
     DroneTracker();
     ~DroneTracker();
-    void track(cv::Mat& frame);
+    void track(cv::Mat& frame, cv::Rect& rect);
     bool tryGetBoundingBox(cv::Rect2f& rect);
 
 private:

@@ -47,45 +47,11 @@ bool CameraCalibrator::calibrate() {
         std::cout << "> Camera Matrix: " << std::endl << streamer.cameras[i]->CameraMatrix << std::endl;
     }
 
-    setReferenceSpace();
     bool ret = calculateExtrinsicsOffset();
     cout << "Finished calibration" << endl;
 
     delete imgPoints;
     return ret;
-}
-
-void CameraCalibrator::setReferenceSpace() {
-    cout << "Setup reference space" << endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    vector<Point2f> corners;
-    Mat frame;
-
-    vector<Point3f> objP;
-    for(int y = 0; y < patternSize.height; y++) {
-        for(int x = 0; x < patternSize.width; x++) {
-            objP.push_back(Point3f(x*tileWidth, y*tileWidth, 0));
-        }
-    }
-
-    while(true) {
-        frame = streamer.GetFrame(0);
-        if(detectCheckerboard(&frame, corners)) {
-
-            cv::Mat R, r, t, c, d;
-            c = streamer.cameras[0]->CameraMatrix;
-            d = streamer.cameras[0]->intrinsics.DistortionCoefficients;
-
-            cv::solvePnPRansac(objP, corners, c, d, r, t);
-            cv::Rodrigues(r, R);
-
-            streamer.cameras[0]->setExtrinsics(R, t);
-
-            std::cout << "> Rotation Matrix: " << std::endl << streamer.cameras[0]->RotationMatrix << std::endl;
-            std::cout << "> Translation Vector: " << std::endl << streamer.cameras[0]->TranslationVector << std::endl;
-            break;
-        }
-    }
 }
 
 bool CameraCalibrator::calculateExtrinsicsOffset() {
@@ -138,23 +104,6 @@ bool CameraCalibrator::calculateExtrinsicsOffset() {
         imgPoints1.push_back(imgPoints[0]);
         imgPoints2.push_back(imgPoints[1]);
         cv::stereoCalibrate(objectPoints, imgPoints1, imgPoints2, c1, d1, c2, d2, Size(streamer.cameras[0]->intrinsics.ImageSize[0], streamer.cameras[0]->intrinsics.ImageSize[1]), R, t, E, F);
-        /*
-        cv::Mat r1, t1, r2, t2, c1, c2, d1, d2;
-        c1 = streamer.cameras[i]->CameraMatrix;
-        d1 = streamer.cameras[i]->intrinsics.DistortionCoefficients;
-        c2 = streamer.cameras[0]->CameraMatrix;
-        d2 = streamer.cameras[0]->intrinsics.DistortionCoefficients;
-
-
-        cv::solvePnPRansac(objP, imgPoints[0], c1, d1, r1, t1);
-        cv::solvePnPRansac(objP, imgPoints[1], c2, d2 ,r2, t2);
-
-        cv::Mat R1, R2, R, t;
-        cv::Rodrigues(r1, R1);
-        cv::Rodrigues(r2, R2);
-        R = R1.t() * R2;
-        t = R1.t() * (t2 - t1);
-        */
 
         streamer.cameras[i]->setExtrinsics(R, t);
         std::cout << "> Rotation Matrix: " << std::endl << streamer.cameras[i]->RotationMatrix << std::endl;

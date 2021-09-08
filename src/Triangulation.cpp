@@ -5,7 +5,8 @@ Triangulation::Triangulation(CameraStreamer &streamer) : streamer(streamer) {}
 
 cv::Vec3f Triangulation::triangulate() {
     std::vector<cv::Mat> frames;
-    streamer.GetFrames(frames);
+    std::vector<cv::Rect> boundingBoxes;
+    streamer.GetFrames(frames, boundingBoxes);
 
     cv::Size patternSize(7,5);
     double tileWidth = 0.0325;
@@ -15,7 +16,23 @@ cv::Vec3f Triangulation::triangulate() {
     cv::Mat gray, r, R, t;
     std::vector<cv::Point2f> corners, undistorted;
     std::vector<cv::Point3f> directions(streamer.cameraCount);
+
     for(int i = 0; i < streamer.cameraCount; i++) {
+
+        /*
+        cv::Point2f trackingPoint = boundingBoxes[i].tl() + cv::Point(boundingBoxes[i].width / 2, boundingBoxes[i].height/2);
+        cv::Mat d = cv::Mat(3, 1, CV_64F);
+        d.at<double>(0,0) = trackingPoint.x;
+        d.at<double>(1,0) = trackingPoint.y;
+        d.at<double>(2,0) = 1.0f;
+        d = streamer.cameras[i]->CameraMatrix.inv() * d;
+        d = streamer.cameras[i]->RotationMatrix.inv() * d;
+        cv::Point3f dir(d.at<double>(0,0), d.at<double>(1, 0), d.at<double>(2,0));
+        dir *= 1/cv::norm(dir);
+
+        directions[i] = dir;
+        */
+
         cv::cvtColor(frames[i], gray, cv::COLOR_BGR2GRAY);
 
         if(cv::findChessboardCorners(gray, patternSize, corners)) {
@@ -27,7 +44,8 @@ cv::Vec3f Triangulation::triangulate() {
             d.at<double>(1,0) = trackingPoint.y;
             d.at<double>(2,0) = 1.0f;
             d = streamer.cameras[i]->CameraMatrix.inv() * d;
-            d = streamer.cameras[i]->RotationMatrix.inv() * d;
+            d = streamer.cameras[i]->RotationMatrix * d;
+
             cv::Point3f dir(d.at<double>(0,0), d.at<double>(1, 0), d.at<double>(2,0));
             dir *= 1/cv::norm(dir);
 
@@ -36,36 +54,41 @@ cv::Vec3f Triangulation::triangulate() {
     }
 
     draw(directions);
+
     return cv::Vec3f();
 }
 
 void Triangulation::draw(std::vector<cv::Point3f> directions) {
     cv::Mat camOverview = cv::Mat::zeros(400, 400, CV_8UC3);
-    // 400x400 should be 2x2 meter => factor: 200
+    // 400x400 should be 2x2 meter => 1m => 200 units
     float fac = 200.0f;
-    cv::Point origin(200, 300);
-
-    cv::line(camOverview, cv::Point(-6, 0) + origin, cv::Point(6, 0) + origin, cv::Scalar(255, 255, 255), 1);
-    cv::line(camOverview, cv::Point(0, -6) + origin, cv::Point(0, 6) + origin, cv::Scalar(255, 255, 255), 1);
-    cv::putText(camOverview, "origin", cv::Point(3, 15) + origin, cv::FONT_HERSHEY_DUPLEX, .5, cv::Scalar(255, 255, 255), 1);
+    cv::Point origin(200, 200);
+    cv::putText(camOverview, "RC", cv::Point(3, 15) + origin, cv::FONT_HERSHEY_DUPLEX, .5, cv::Scalar(0, 0, 255), 1);
 
     //ref cam
     cv::Mat refT = streamer.cameras[0]->TranslationVector;
     cv::Mat refR = streamer.cameras[0]->RotationMatrix;
-    cv::Point refOrigin = cv::Point(refT.at<double>(0, 0) * fac, refT.at<double>(2, 0) * -fac) + origin;
-    cv::circle(camOverview, refOrigin, 3, cv::Scalar(0, 0, 255), 3);
-    cv::line(camOverview, refOrigin, refOrigin + cv::Point(directions[0].x * 400, directions[0].z * 400), cv::Scalar(0, 255, 0), 1);
+    drawCamera(camOverview, refT, refR, directions[0], origin, fac, cv::Scalar(0, 0, 255));
 
-    cv::Point cp;
-    cv::Mat ct;
+    //cv::Point cp;
+    cv::Mat ct, cR;
     for(int i = 1; i < streamer.cameraCount; i++) {
-        ct = refT - refR * streamer.cameras[i]->TranslationVector;
-        cp = cv::Point(ct.at<double>(0, 0) * fac, ct.at<double>(2, 0) * -fac) + origin;
-        cv::circle(camOverview, cp, 3, cv::Scalar(255, 0, 0), 3);
-
-        cv::line(camOverview, cp, cp + cv::Point(directions[i].x * 400, directions[i].z * 400), cv::Scalar(0, 255, 0), 1);
+        drawCamera(camOverview, streamer.cameras[i]->TranslationVector, streamer.cameras[i]->RotationMatrix, directions[i], origin, fac);
     }
 
     cv::imshow("Camera Overview", camOverview);
     cv::waitKey(1);
+}
+
+void Triangulation::drawCamera(cv::Mat& frame, cv::Mat& t, cv::Mat& R, cv::Point3f& rayDir, cv::Point& origin, float fac, const cv::Scalar& color) {
+    cv::Mat o = t;
+    cv::Point2f drawOrigin = cv::Point((int)(o.at<double>(0, 0) * fac), (int)(o.at<double>(2, 0) * fac)) + origin;
+    cv::circle(frame, drawOrigin, 1, color, 2);
+
+    cv::Mat forward = cv::Mat::zeros(3, 1, CV_64FC1);
+    forward.at<double>(2, 0) = 1;
+    forward = R * forward;
+    cv::line(frame, drawOrigin, drawOrigin + cv::Point2f(forward.at<double>(0, 0), forward.at<double>(2, 0)) * 30, cv::Scalar(0, 255, 255), 1);
+    cv::line(frame, drawOrigin, drawOrigin + cv::Point2f(rayDir.x, rayDir.z) * 400, cv::Scalar(0, 255, 0), 1);
+
 }

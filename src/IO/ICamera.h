@@ -35,7 +35,7 @@ public:
     virtual void SetResolution(int width, int height);
 
     void Setup();
-    void StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx);
+    void StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::vector<cv::Rect>* boundingBoxBuffer, std::shared_mutex* mtx);
     void StopCapture();
     bool IsCapturing();
     bool IsFrameAvailable(int index);

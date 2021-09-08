@@ -12,6 +12,8 @@ ICamera::ICamera(int deviceId, std::string type, const std::vector<int>& imageSi
     }
 
     intrinsics.ImageSize = imageSize;
+    TranslationVector = cv::Mat::zeros(3, 1, CV_64FC1);
+    RotationMatrix = cv::Mat::eye(3, 3, CV_64FC1);
 }
 
 ICamera::~ICamera() {
@@ -39,7 +41,7 @@ void ICamera::Setup() {
  * @param multiBuffer The buffer where the frame will be written to.
  * @param mtx Mutex object which is used to lock thread sensitive actions.
  */
-void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::shared_mutex* mtx) {
+void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBuffer, std::vector<cv::Rect>* boundingBoxBuffer, std::shared_mutex* mtx) {
     checkSetup();
     isCapturing = true;
     lastBufferIndex = *bufferIndex;
@@ -50,11 +52,12 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
 
     while(IsCapturing()) {
         cv::Mat frame;
+        cv::Rect boundingRect = cv::Rect();
         (*cam) >> frame;
 
         if(!frame.empty()) {
             if(isTrackingEnabled) {
-                tracker->track(frame);
+                tracker->track(frame, boundingRect);
 
                 if(!isDroneFocused) {
                     isDroneFocused = tracker->droneFound;
@@ -70,6 +73,7 @@ void ICamera::StartCapture(const int* bufferIndex, std::vector<cv::Mat>* multiBu
                 lastBufferIndex = bIndex;
             }
 
+            boundingBoxBuffer->at(bIndex) = boundingRect;
             multiBuffer->at(bIndex) = frame;
             SetFrameAvailable(bIndex, true);
 

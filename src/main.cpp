@@ -35,5 +35,10 @@ int main() {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+
+    /**
+     * IMPORTANT FORMULA
+     * cam [x, y, z] = R * world [x, y ,z] + t
+     */
     return 0;
 }

@@ -12,6 +12,7 @@ class CameraStreamer {
 public:
     std::vector<ICamera*> cameras;
     std::vector<std::vector<cv::Mat>*> frame_queues;
+    std::vector<std::vector<cv::Rect>*> bounding_queues;
     std::vector<std::thread*> camera_threads;
     int cameraCount;
     int* bufferIndex;
@@ -19,6 +20,7 @@ public:
     explicit CameraStreamer(std::vector<int> deviceIds, bool debugMode = false);
     ~CameraStreamer();
     void GetFrames(std::vector<cv::Mat>& frames);
+    void GetFrames(std::vector<cv::Mat>& frames, std::vector<cv::Rect>& bbs);
     cv::Mat GetFrame(int camIndex);
     void activateDroneTracking();
 

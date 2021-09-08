@@ -31,6 +31,5 @@ private:
     bool detectCheckerboard(const Mat* frame, InputOutputArray corners);
     void applyIntrinsics(const vector<vector<Point2f>>* imagePoints, ICamera* cam) const;
     bool calculateExtrinsicsOffset();
-    void setReferenceSpace();
     void drawCheckerboardCorners(Mat img, InputArray corners, String& winName);
 };
