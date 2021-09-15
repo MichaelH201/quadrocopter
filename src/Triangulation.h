@@ -3,6 +3,7 @@
 
 #include "opencv2/opencv.hpp"
 #include "IO/CameraStreamer.h"
+#include "scene/Ray.h"
 
 class Triangulation {
 public:
@@ -11,10 +12,12 @@ public:
 
 private:
     CameraStreamer& streamer;
+    cv::Mat calcLeastSquarePoint(std::vector<Rayd>& rays);
+    void lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, std::vector<cv::Point2f> imagePoints);
 
     /// tests ///
-    void draw(std::vector<cv::Point3f> directions);
-    void drawCamera(cv::Mat& frame, cv::Mat& t, cv::Mat& R, cv::Point3f& rayDir, cv::Point& origin, float fac, const cv::Scalar& color = cv::Scalar(255, 0, 0));
+    void draw(std::vector<Rayd>& rays, cv::Vec3f dronePosition);
+    void drawCamera(cv::Mat& frame, cv::Mat& t, cv::Mat& R, Rayd& ray, cv::Point& origin, float fac, const cv::Scalar& color = cv::Scalar(255, 0, 0));
 };
 
 

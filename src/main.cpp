@@ -18,7 +18,7 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {0, 1, 2};
+    vector<int> deviceIds = {0, 1};
     CameraStreamer streamer(deviceIds, true);
 
     // start calibration
@@ -30,15 +30,13 @@ int main() {
 
     Triangulation triag(streamer);
 
+    std::cout << std::endl;
+    std::cout << "drone position:" << std::endl;
     while(true) {
-        triag.triangulate();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        cv::Vec3f pos = triag.triangulate();
+        std::cout << '\r' << pos << std::flush;
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-
-    /**
-     * IMPORTANT FORMULA
-     * cam [x, y, z] = R * world [x, y ,z] + t
-     */
     return 0;
 }
