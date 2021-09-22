@@ -15,36 +15,59 @@ cv::Vec3f Triangulation::triangulate() {
     std::vector<Rayd> rays(streamer.cameraCount);
 
     //tmp
-    std::vector<cv::Point2f> features;
+    std::vector<cv::Point2f> features(streamer.cameraCount);
+
 
     for(int i = 0; i < streamer.cameraCount; i++) {
+
+        cv::Point2f trackingPoint = boundingBoxes[i].tl() + cv::Point(boundingBoxes[i].width / 2, boundingBoxes[i].height/2);
+        //cv::Point2f trackingPoint = corners[0];
+        features[i] = trackingPoint;
+
+        Rayd ray = Rayd();
+        ray.Origin = streamer.cameras[i]->TranslationVector;
+
+        cv::Mat d = cv::Mat(3, 1, CV_64F);
+        d.at<double>(0,0) = trackingPoint.x;
+        d.at<double>(1,0) = trackingPoint.y;
+        d.at<double>(2,0) = 1.0f;
+        d = streamer.cameras[i]->CameraMatrix.inv() * d;
+        d = streamer.cameras[i]->RotationMatrix * d;
+        d *= 1/cv::norm(d);
+
+        ray.Direction = d;
+        rays[i] = ray;
+
+        /*
         cv::cvtColor(frames[i], gray, cv::COLOR_BGR2GRAY);
         if(cv::findChessboardCorners(gray, patternSize, corners)) {
             cornerSubPix(gray, corners, cv::Size(11,11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001));
             cv::undistortPoints(corners, undistorted, streamer.cameras[i]->CameraMatrix, streamer.cameras[i]->intrinsics.DistortionCoefficients);
-
-            //cv::Point2f trackingPoint = boundingBoxes[i].tl() + cv::Point(boundingBoxes[i].width / 2, boundingBoxes[i].height/2);
-            cv::Point2f trackingPoint = corners[0];
-            features.push_back(trackingPoint);
-
-            Rayd ray = Rayd();
-            ray.Origin = streamer.cameras[i]->TranslationVector;
-
-            cv::Mat d = cv::Mat(3, 1, CV_64F);
-            d.at<double>(0,0) = trackingPoint.x;
-            d.at<double>(1,0) = trackingPoint.y;
-            d.at<double>(2,0) = 1.0f;
-            d = streamer.cameras[i]->CameraMatrix.inv() * d;
-            d = streamer.cameras[i]->RotationMatrix * d;
-            d *= 1/cv::norm(d);
-
-            ray.Direction = d;
-            rays[i] = ray;
-        }
+        }*/
     }
 
     cv::Mat dronePosition = calcLeastSquarePoint(rays);
-    lmOptimization(rays, dronePosition, features);
+    //// drawing of reprojection /////
+    for(int i = 0; i < streamer.cameraCount; i++) {
+        cv::Mat frame = frames[i];
+        cv::Mat cameraSpacePos = streamer.cameras[i]->RotationMatrix.inv() * (dronePosition - streamer.cameras[i]->TranslationVector);
+        cv::Mat hReproImagePos = streamer.cameras[i]->CameraMatrix * cameraSpacePos;
+        cv::Point2f reproImagePos(hReproImagePos.at<double>(0,0)/hReproImagePos.at<double>(2,0), hReproImagePos.at<double>(1,0)/hReproImagePos.at<double>(2,0));
+
+        cv::circle(frames[i], reproImagePos, 2, cv::Scalar(0, 255, 0), 3);
+    }
+
+    dronePosition = lmOptimization(rays, dronePosition, features);
+    //// drawing of optimzed reprojection /////
+    for(int i = 0; i < streamer.cameraCount; i++) {
+        cv::Mat cameraSpacePos = streamer.cameras[i]->RotationMatrix.inv() * (dronePosition - streamer.cameras[i]->TranslationVector);
+        cv::Mat hReproImagePos = streamer.cameras[i]->CameraMatrix * cameraSpacePos;
+        cv::Point2f reproImagePos(hReproImagePos.at<double>(0,0)/hReproImagePos.at<double>(2,0), hReproImagePos.at<double>(1,0)/hReproImagePos.at<double>(2,0));
+
+        cv::circle(frames[i], reproImagePos, 2, cv::Scalar(0, 0, 255), 3);
+        cv::imshow("reprojection " + std::to_string(i), frames[i]);
+        cv::waitKey(1);
+    }
 
     draw(rays, dronePosition);
 
@@ -74,7 +97,7 @@ cv::Mat Triangulation::calcLeastSquarePoint(std::vector<Rayd>& rays) {
     return M.inv() * P;
 }
 
-void Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, std::vector<cv::Point2f> features) {
+cv::Mat Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, std::vector<cv::Point2f> features) {
     double damping = 1.0;
     for(unsigned int it = 0; it < 10 && damping <= 1000000.0; it++) {
         cv::Mat JTJ = cv::Mat::zeros(3, 3, CV_64F);
@@ -82,6 +105,10 @@ void Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, st
         double squaredError = 0;
 
         for(int i = 0; i < streamer.cameraCount; i++) {
+
+            if(rays[i].Origin.empty() || rays[i].Direction.empty())
+                continue;
+
             cv::Mat cameraSpacePos = streamer.cameras[i]->RotationMatrix.inv() * (currPos - streamer.cameras[i]->TranslationVector);
             cv::Mat hReproImagePos = streamer.cameras[i]->CameraMatrix * cameraSpacePos;
             cv::Point2f reproImagePos(hReproImagePos.at<double>(0,0)/hReproImagePos.at<double>(2,0), hReproImagePos.at<double>(1,0)/hReproImagePos.at<double>(2,0));
@@ -93,9 +120,9 @@ void Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, st
             double de_x[3];
             double de_y[3];
             for(int d = 0; d < 3; d++) {
-                cv::Mat goodPositionPlus = currPos;
+                cv::Mat goodPositionPlus = currPos.clone();
                 goodPositionPlus.at<double>(d,0) += 0.001;
-                cv::Mat goodPositionMinus = currPos;
+                cv::Mat goodPositionMinus = currPos.clone();
                 goodPositionMinus.at<double>(d,0)  -= 0.001;
 
                 cv::Mat cameraSpacePosPlus = streamer.cameras[i]->RotationMatrix.inv() * (goodPositionPlus - streamer.cameras[i]->TranslationVector);
@@ -140,6 +167,9 @@ void Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, st
 
             newSquaredError = 0.0;
             for(int i = 0; i < streamer.cameraCount; i++) {
+                if(rays[i].Origin.empty() || rays[i].Direction.empty())
+                    continue;
+
                 cv::Mat cameraSpacePos = streamer.cameras[i]->RotationMatrix.inv() * (newGoodPosition - streamer.cameras[i]->TranslationVector);
                 cv::Mat hReproImagePos = streamer.cameras[i]->CameraMatrix * cameraSpacePos;
                 cv::Point2f reproImagePos(hReproImagePos.at<double>(0,0)/hReproImagePos.at<double>(2,0), hReproImagePos.at<double>(1,0)/hReproImagePos.at<double>(2,0));
@@ -160,6 +190,8 @@ void Triangulation::lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, st
             }
         }
     }
+
+    return currPos;
 }
 
 

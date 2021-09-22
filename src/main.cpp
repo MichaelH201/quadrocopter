@@ -18,15 +18,15 @@ int main() {
     Size patternSize(7,5); // amount of inner tiles of the chessboard
 
     // set up the camera streamer
-    vector<int> deviceIds = {0, 1};
+    vector<int> deviceIds = {1,0,2};
     CameraStreamer streamer(deviceIds, true);
 
     // start calibration
     CameraCalibrator calibrator(streamer, patternSize, tileWidth);
-    calibrator.maxCalibrationFrames = 5;
+    calibrator.maxCalibrationFrames = 10;
     calibrator.calibrate();
 
-    //streamer.activateDroneTracking();
+    streamer.activateDroneTracking();
 
     Triangulation triag(streamer);
 
@@ -35,7 +35,7 @@ int main() {
     while(true) {
         cv::Vec3f pos = triag.triangulate();
         std::cout << '\r' << pos << std::flush;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     return 0;

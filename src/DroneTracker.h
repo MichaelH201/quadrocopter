@@ -2,7 +2,7 @@
 #define QUADROCOPTER_DRONETRACKER_H
 
 #include "opencv2/opencv.hpp"
-#include "opencv2/tracking.hpp"
+#include "opencv2/bgsegm.hpp"
 #include <iostream>
 #include "utils.h"
 #include "limits"
@@ -23,7 +23,7 @@ private:
     int detectionCount = 0;
     static const int MAX_DETECTIONS = 10;
     cv::Rect currentBbox = cv::Rect();
-    cv::Ptr<cv::Tracker> tracker;
+    cv::Ptr<cv::BackgroundSubtractor> background;
 
     std::vector<cv::Rect2f> detectMovingObjects();
     void combineOverlappingBoundingBoxes(std::vector<cv::Rect2f>& bboxes);

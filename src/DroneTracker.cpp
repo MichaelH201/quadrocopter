@@ -1,11 +1,11 @@
 #include "DroneTracker.h"
 
 DroneTracker::DroneTracker() {
-    tracker = cv::TrackerCSRT::create();
+    background = cv::bgsegm::createBackgroundSubtractorMOG();
 }
 
 DroneTracker::~DroneTracker() {
-    delete tracker;
+    delete background;
 }
 
 
@@ -27,12 +27,7 @@ void DroneTracker::track(cv::Mat& frame, cv::Rect& rect) {
 
     auto bbs = detectMovingObjects();
 
-    if(!droneFound) {
-        tryDetectDrone(frame, bbs);
-    }
-    else {
-        tracker->update(frame, currentBbox);
-    }
+    tryDetectDrone(frame, bbs);
 
     if(droneFound)
         rect = currentBbox;
@@ -59,11 +54,30 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
         return true;
     }
 */
+    if(!currentBbox.empty() && !bbs.empty()) {
+        float minDist = std::numeric_limits<float>::max();
+        int minDistIndex;
+        for(int i = 0; i < bbs.size(); i++) {
+            cv::Rect2f currDetection = bbs[i];
+            cv::Point2f c1 = currentBbox.tl() + cv::Point(currentBbox.width / 2, currentBbox.height/2);
+            cv::Point2f c2 = currDetection.tl() + cv::Point2f(currDetection.width / 2, currDetection.height/2);
+            float sqDistance = (c1.x - c2.x)*(c1.x - c2.x) + (c1.y - c2.y)*(c1.y - c2.y);
 
-    if(bbs.size() == 1 && bbs[0].area() > 5000 && bbs[0].area() < 40000) {
-        float ratio = bbs[0].height/bbs[0].width;
-        if(ratio > .3 && ratio < .6) {
+            if(sqDistance < minDist) {
+                minDist = sqDistance;
+                minDistIndex = i;
+            }
+        }
 
+        currentBbox = bbs[minDistIndex];
+        return true;
+    }
+    else if(bbs.size() == 1) {
+        if(bbs[0].height < bbs[0].width) {
+            currentBbox = bbs[0];
+            droneFound = true;
+            return true;
+            /*
             cv::Rect2f currDetection = bbs[0];
 
             if(!lastDetection.empty()) {
@@ -86,10 +100,10 @@ bool DroneTracker::tryDetectDrone(cv::Mat& frame, std::vector<cv::Rect2f>& bbs) 
 
             if(detectionCount >= MAX_DETECTIONS) {
                 currentBbox = bbs[0];
-                tracker->init(frame, currentBbox);
                 droneFound = true;
                 return true;
             }
+             */
         }
     }
 
@@ -108,11 +122,14 @@ bool DroneTracker::tryGetBoundingBox(cv::Rect2f& rect) {
 std::vector<cv::Rect2f> DroneTracker::detectMovingObjects() {
     cv::Mat fgMask, addition;
 
+    background->apply(buffer[MAX_BUFFER_LENGTH-1], fgMask);
+
+    /*
     cv::absdiff(buffer[MAX_BUFFER_LENGTH-2], buffer[MAX_BUFFER_LENGTH-1], fgMask);
     cv::blur(fgMask, fgMask, cv::Size(3, 3));
     cv::threshold(fgMask, fgMask, 25, 255, cv::THRESH_BINARY);
     cv::dilate(fgMask, fgMask, cv::getStructuringElement(cv::MORPH_RECT, cv::Size(6, 6), cv::Point(3,3)));
-
+*/
     //cv::imshow("diff image", fgMask);
 
     // find contours

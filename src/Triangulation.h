@@ -13,7 +13,7 @@ public:
 private:
     CameraStreamer& streamer;
     cv::Mat calcLeastSquarePoint(std::vector<Rayd>& rays);
-    void lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, std::vector<cv::Point2f> imagePoints);
+    cv::Mat lmOptimization(std::vector<Rayd>& rays, cv::Mat& currPos, std::vector<cv::Point2f> imagePoints);
 
     /// tests ///
     void draw(std::vector<Rayd>& rays, cv::Vec3f dronePosition);
