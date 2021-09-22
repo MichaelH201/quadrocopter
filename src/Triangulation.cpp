@@ -8,7 +8,6 @@ cv::Vec3f Triangulation::triangulate() {
     std::vector<cv::Rect> boundingBoxes;
     streamer.GetFrames(frames, boundingBoxes);
 
-    cv::Size patternSize(7,5);
 
     cv::Mat gray, r, R, t;
     std::vector<cv::Point2f> corners, undistorted;
@@ -21,7 +20,6 @@ cv::Vec3f Triangulation::triangulate() {
     for(int i = 0; i < streamer.cameraCount; i++) {
 
         cv::Point2f trackingPoint = boundingBoxes[i].tl() + cv::Point(boundingBoxes[i].width / 2, boundingBoxes[i].height/2);
-        //cv::Point2f trackingPoint = corners[0];
         features[i] = trackingPoint;
 
         Rayd ray = Rayd();
@@ -37,13 +35,6 @@ cv::Vec3f Triangulation::triangulate() {
 
         ray.Direction = d;
         rays[i] = ray;
-
-        /*
-        cv::cvtColor(frames[i], gray, cv::COLOR_BGR2GRAY);
-        if(cv::findChessboardCorners(gray, patternSize, corners)) {
-            cornerSubPix(gray, corners, cv::Size(11,11), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::EPS + cv::TermCriteria::MAX_ITER, 30, 0.001));
-            cv::undistortPoints(corners, undistorted, streamer.cameras[i]->CameraMatrix, streamer.cameras[i]->intrinsics.DistortionCoefficients);
-        }*/
     }
 
     cv::Mat dronePosition = calcLeastSquarePoint(rays);

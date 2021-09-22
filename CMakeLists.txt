@@ -12,11 +12,18 @@ set(Project_FILES
         src/Calibrator.cpp
         src/Calibrator.h
         src/scene/CameraIntrinsics.h
-        src/math/MSVC_Fixes.h
         src/defines.h
         src/IO/LogitechC920.cpp
         src/IO/LogitechC920.h
-        src/utils.h src/IO/ICamera.h src/IO/ICamera.cpp src/IO/CameraStreamer.cpp src/IO/CameraStreamer.h src/DroneTracker.cpp src/DroneTracker.h src/Triangulation.cpp src/Triangulation.h)
+        src/utils.h
+        src/IO/ICamera.h
+        src/IO/ICamera.cpp
+        src/IO/CameraStreamer.cpp
+        src/IO/CameraStreamer.h
+        src/DroneTracker.cpp
+        src/DroneTracker.h
+        src/Triangulation.cpp
+        src/Triangulation.h)
 
 add_executable(Quadrocopter ${Project_FILES})
 
